@@ -1,0 +1,43 @@
+# Using the RFC 2616...
+
+# * Test the CRUD operations for the general_users table
+
+# declare a variable to 
+
+
+# Create (POST)
+POST http://127.0.0.1:8000/general_user HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "some-new-admin",
+  "email": "admin@localhost",
+  "password_hash": "some generic password (not hashed yet)",
+  "additional_info": { "role": "ADMIN" }
+}
+
+
+### Read (GET)
+# get all
+GET http://127.0.0.1:8000/general_users HTTP/1.1
+
+### get by id
+GET http://127.0.0.1:8000/general_user/id=1 HTTP/1.1
+
+
+### Update (PUT)
+# update by email
+PUT http://127.0.0.1:8000/general_user/email=admin%40localhost HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "some-new-admin",
+  "email": "admin@localhost",
+  "password_hash": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQGxvY2FsaG9zdCIsInBhc3N3b3JkIjoic29tZV9hZG1pbl9wYXNzd29yZCJ9.rYLNzcVDGqeaZO8LCR6X1baO5iXroOsV1FKltzYrHGA",
+  "additional_info": {
+    "role": "ADMIN"
+  }
+}
+
+### Delete (DELETE)
+DELETE http://127.0.0.1:8000/general_user/email=admin@localhost HTTP/1.1
