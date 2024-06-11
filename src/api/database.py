@@ -58,7 +58,7 @@ def generate_sqlalchemy_model_class(
 
     for column_name, column_type in columns:
         column_class, _ = SQL_TYPE_MAPPING.get(column_type, (String, str))  # Default to String if type not found
-        column_kwargs = {'primary_key': column_name in primary_keys}  # Set primary key flag
+        column_kwargs: dict[str, Any] = {'primary_key': column_name in primary_keys}  # Set PK flag
         attrs[column_name] = Column(column_name, column_class, **column_kwargs)  # Add column to model
 
     model_class = type(table_name.capitalize(), (base,), attrs)
@@ -99,7 +99,7 @@ def create_pydantic_model(db: Session, table: str, model_name: str, schema: str 
         column_name, _, column_type = col
         _, pydantic_type = SQL_TYPE_MAPPING.get(column_type, (_, str))  # Default to str if type not found
         fields[column_name] = (Optional[pydantic_type], None)  # Set field type and default value
-        print(f"\tColumn '{column_name}' has type '{column_type}' which maps to '{pydantic_type}'")  # Log field type mapping
+        print(f"\tColumn {column_name:^16} {column_type:>24} -> {pydantic_type}")  # Log field type mapping
     return create_model(model_name, **fields)
 
 
@@ -122,4 +122,4 @@ def generate_models(
         print(f"\nPydantic model for table '{name}': {pydantic_model.model_fields}")
     return combined_models
 
-all_models = generate_models(engine, ['store'])  # Generate models for 'store' schema
+all_models: Dict[str, Tuple[Type[Base], Type[BaseModel]]] = generate_models(engine, ['store'])  # Generate models for 'store' schema  # type: ignore

@@ -88,6 +88,13 @@ def _add_schema_routes(
     schema_dt_routes(db_dependency, basic_dt)
     schema_view_routes(db_dependency, views)
 
+    for model in all_models.values():
+        crud_routes(
+            model[0],  # * SQLAlchemy Model 
+            model[1],  # * Pydantic Model
+            crud_attr,            
+            db_dependency, 
+            )
 
 # * Add routes for each schema...
 _add_schema_routes(get_db, b_color="43")
