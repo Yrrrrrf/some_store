@@ -34,7 +34,7 @@ def schema_dt_routes(
             query = db.query(model[0])
             for attr, value in filters.dict().items():
                 if value is not None:  # if the value is not None, filter by it
-                    query = query.filter(getattr(model, attr) == value)
+                    query = query.filter(getattr(model[0], attr) == value)
             return query.all()
 
         return get_all

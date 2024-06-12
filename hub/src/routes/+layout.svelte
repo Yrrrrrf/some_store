@@ -39,7 +39,8 @@
         <!-- App Bar -->
         <AppBar>
             <svelte:fragment slot="lead">
-                <strong class="text-xl uppercase">Welcome</strong>
+                <strong class="text-xl uppercase pr-2">Welcome to</strong>
+                <strong class="text-xl uppercase variant-filled-primary p-2 rounded-xl">Some Store!</strong>
             </svelte:fragment>
 
             <svelte:fragment slot="trail">
@@ -64,10 +65,7 @@
 
     <slot />  <!-- Page Route Content -->
 
-    <!-- Some Footer Content -->
-    <svelte:fragment slot="footer">
-        <div class="variant-soft-tertiary"><h1>API URL: {apiUrl}</h1></div>
-        <!--		<p>This is some footer...<code class="code">/src/routes/+page.svelte</code></p>-->
-    </svelte:fragment>
-
 </AppShell>
+
+
+<div class="fixed bottom-0 left-0 p-2 bg-soft-tertiary text-white text-sm">API URL: <code>{apiUrl}</code></div>

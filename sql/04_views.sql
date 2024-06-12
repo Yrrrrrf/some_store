@@ -88,3 +88,57 @@ SELECT * FROM revenue_by_vendor;
 SELECT * FROM purchases_by_provider;
 SELECT * FROM monthly_revenue;
 
+-- * The views below are named as 'report_*' to indicate that they are intended for reporting purposes
+-- ^ This obeys the naming convention of the views that are REQUESTED on the requirements for the project
+-- Reporte de ventas (id_venta, fecha_venta, cliente, importe_total) con filtrado por fecha de inicio y fecha fin
+DROP VIEW IF EXISTS report_sales;
+CREATE VIEW report_sales AS
+SELECT s.id AS "Id Venta", s.sale_date AS "Fecha Venta", c.name AS "Cliente", s.total_amount AS "Importe Total"
+FROM store.sale s
+JOIN store.customer c ON s.customer_id = c.id;
+
+-- Reporte de venta por cliente (id_cliente, nom_cliente, importe total)
+DROP VIEW IF EXISTS report_sales_by_customer;
+CREATE VIEW report_sales_by_customer AS
+SELECT c.id AS "Id Cliente", c.name AS "Nombre Cliente", SUM(s.total_amount) AS "Importe Total Vendido"
+FROM store.sale s
+JOIN store.customer c ON s.customer_id = c.id
+GROUP BY c.id, c.name;
+
+-- Reporte de venta por articulo (id_articulo, nom_articulo, cantidad vendida, importe total)
+DROP VIEW IF EXISTS report_sales_by_product;
+CREATE VIEW report_sales_by_product AS
+SELECT p.id AS "Id Articulo", p.description AS "Nombre Articulo", SUM(sd.quantity) AS "Cantidad Vendida", SUM(sd.quantity * sd.unit_price) AS "Importe Total Vendido"
+FROM store.sale_details sd
+JOIN store.product p ON sd.product_id = p.id
+GROUP BY p.id, p.description;
+
+-- Reporte de ventas por mes (mes, importe total de ventas)
+DROP VIEW IF EXISTS report_sales_by_month;
+CREATE VIEW report_sales_by_month AS
+SELECT TO_CHAR(s.sale_date, 'YYYY-MM') AS "Mes", SUM(s.total_amount) AS "Importe Total Vendido"
+FROM store.sale s
+GROUP BY TO_CHAR(s.sale_date, 'YYYY-MM');
+
+-- Reporte de ventas por mes por articulo (mes, articulo, cantidad_vendida, importe total ventas)
+DROP VIEW IF EXISTS report_sales_by_month_by_product;
+CREATE VIEW report_sales_by_month_by_product AS
+SELECT TO_CHAR(s.sale_date, 'YYYY-MM') AS "Mes", p.description AS "Nombre Articulo", SUM(sd.quantity) AS "Cantidad Vendida", SUM(sd.quantity * sd.unit_price) AS "Importe Total Vendido"
+FROM store.sale_details sd
+JOIN store.sale s ON sd.sale_id = s.id
+JOIN store.product p ON sd.product_id = p.id
+GROUP BY TO_CHAR(s.sale_date, 'YYYY-MM'), p.description;
+
+-- Reporte de existencias (id_articulo, nombre_articulo, existencias)
+DROP VIEW IF EXISTS report_product_inventory;
+CREATE VIEW report_product_inventory AS
+SELECT p.id AS "Id Articulo", p.description AS "Nombre Articulo", p.unit_price AS "Precio Unitario"
+FROM store.product p;
+
+-- ? Testing the report views
+SELECT * FROM report_sales;
+SELECT * FROM report_sales_by_customer;
+SELECT * FROM report_sales_by_product;
+SELECT * FROM report_sales_by_month;
+SELECT * FROM report_sales_by_month_by_product;
+SELECT * FROM report_product_inventory;
