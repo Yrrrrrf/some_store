@@ -18,6 +18,7 @@
     "@tailwindcss/forms": "0.5.7",
     "@tailwindcss/typography": "0.5.13",
     "@types/node": "20.14.2",
+    "@types/tabulator-tables": "^6.2.0",
     "autoprefixer": "10.4.19",
     "postcss": "8.4.38",
     "svelte": "^4.2.7",
@@ -31,8 +32,12 @@
   "type": "module",
   "dependencies": {
     "@floating-ui/dom": "1.6.5",
+    "@neodrag/svelte": "^2.0.6",
     "@vincjo/datatables": "^1.14.10",
     "highlight.js": "11.9.0",
-    "svelte-table": "^0.6.3"
+    "jquery": "^3.7.1",
+    "svelte-datatables-net": "^0.0.11",
+    "svelte-dnd-action": "^0.9.48",
+    "tabulator-tables": "^6.2.1"
   }
 }

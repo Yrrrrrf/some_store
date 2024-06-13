@@ -42,17 +42,23 @@
         });
     }
 
-    // Reactive statement for filtered and sorted data
+    // Stores for column-specific filters
+    let columnFilters = writable<{ [key: string]: string }>({});
+    $: columnFiltersValue = $columnFilters;
+
+    // Reactive statement for filtered data considering search term and column filters
     $: filteredData = tableData.filter(row => {
         return Object.values(row).some(value =>
             value.toString().toLowerCase().includes(searchTermValue.toLowerCase())
-        );
+        ) && Object.entries(columnFiltersValue).every(([column, filter]) => {
+            return row[column]?.toString().toLowerCase().includes(filter.toLowerCase());
+        });
     });
 
     $: sortedData = getSortedData(filteredData, $sortColumn, $sortDirection);
 
     function toUpperWithSpace(str: string): string {
-    //     replace all the '_' with ' ' and capitalize the first letter of each word
+        // replace all the '_' with ' ' and capitalize the first letter of each word
         return str.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
     }
 </script>
@@ -70,13 +76,14 @@
         type="text"
         placeholder="Search..."
         bind:value={$searchTerm}
-        class="search-input mt-2 mb-4 p-2 border rounded "
+        class="variant-ghost-secondary rounded-xl"
 />
 
 {#if tableData.length > 0}
     <div class="table-container">
         <table class="table table-hover">
             <thead>
+            <!-- Sortable Headers Row -->
             <tr>
                 {#each columns as column}
                     <th class="sortable" on:click={() => handleSort(column)}>
@@ -88,6 +95,20 @@
                     </th>
                 {/each}
             </tr>
+            <!-- Filter Inputs Row -->
+            <tr>
+                {#each columns as column}
+                    <th>
+                        <input
+                                type="text"
+                                placeholder={`Filter ${capitalize(column)}`}
+                                bind:value={$columnFilters[column]}
+                                class="variant-ghost-secondary rounded-xl"
+                        />
+                    </th>
+                {/each}
+            </tr>
+
             </thead>
             <tbody>
             {#each sortedData as row}

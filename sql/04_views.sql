@@ -142,3 +142,12 @@ SELECT * FROM report_sales_by_product;
 SELECT * FROM report_sales_by_month;
 SELECT * FROM report_sales_by_month_by_product;
 SELECT * FROM report_product_inventory;
+
+-- select all the views in the database
+SELECT table_name
+FROM information_schema.views
+WHERE table_schema = 'store';
+-- now select all the views in the database with their respective metadata information
+SELECT table_name, view_definition
+FROM information_schema.views
+WHERE table_schema = 'store';

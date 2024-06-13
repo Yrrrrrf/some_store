@@ -20,7 +20,9 @@
     $: current_table.subscribe(value => currentTable = value);
 
     // ^ Defining the tabs
-    let tabs: string[] = ['views', 'tables', 'some'];
+    // * TABLES -> ALL
+    // * VIEWS -> 
+    let tabs: string[] = ['tables', 'views', 'some'];
     // ^ Defining the tables and views
     let tables: string[] = [];
     let views: string[] = [];
@@ -62,10 +64,10 @@
     {/each}
 </TabGroup>
 
-{#if currentTab === 'tables'}
-    <TabContent items={tables} currentItem={currentTable} updateSelectedItem={updateSelectedTable} {tableData}/>
-{/if}
-
 {#if currentTab === 'views'}
     <TabContent items={views} currentItem={currentView} updateSelectedItem={updateSelectedView} {tableData}/>
+{/if}
+
+{#if currentTab === 'tables'}
+    <TabContent items={tables} currentItem={currentTable} updateSelectedItem={updateSelectedTable} {tableData}/>
 {/if}

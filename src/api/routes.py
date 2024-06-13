@@ -69,7 +69,7 @@ def define_routes():
     - Get some useful view data to display on the application (for each schema)
     """
 
-    print(f"\n\033[0;30;47m{Config.NAME.value}\033[m\n")  # WHITE
+    print(f"\n\033[0;30;47m{Config.NAME.value}\033[m\n")  # white bg
     return home, basic_dt, crud_attr, views  # * return all the routers...
 
 home, basic_dt, crud_attr, views = define_routes()
@@ -83,7 +83,7 @@ def _add_schema_routes(
     schema: str = 'store', 
     b_color: str = ""
 ):
-    print(f"\033[0;30;{b_color}m{schema.capitalize()}\033[m")
+    print(f"\033[0;30;{b_color}m{schema.capitalize()}\033[m")  # yellow bg
 
     schema_dt_routes(db_dependency, basic_dt)
     schema_view_routes(db_dependency, views)
