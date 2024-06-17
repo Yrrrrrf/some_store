@@ -1,21 +1,22 @@
 # 3rd party imports
-from fastapi import Depends, HTTPException, APIRouter, Query
-from sqlalchemy.orm import Session, Query, aliased
-from sqlalchemy import text
-from pydantic import BaseModel
-
-# stdlib imports
-from typing import Callable
-from functools import partial
+from fastapi import APIRouter
 
 # local imports
-from src.config import Config
 from src.api.database import *
 from src.api.route_generators import *
-# from src.api.auth import *
+from src.config import Config
 
 
-def define_routes():
+def define_routes() -> Tuple[APIRouter, APIRouter, APIRouter, APIRouter]:
+    """
+    Define the main routes for the API.
+
+    Returns the `APIRouter` for `home`, `basic_dt`, `views` and `crud_attr`.
+
+    Returns:
+        Tuple[`APIRouter`, `APIRouter`, `APIRouter`, `APIRouter`]
+    """
+
     home: APIRouter = APIRouter()  # for home routes
     """
     # Home Route
@@ -43,6 +44,16 @@ def define_routes():
     - Get all the resources of a table (all the rows)
     """
 
+    views: APIRouter = APIRouter()  # todo: views routes... for views xd
+    """
+    # Views Routes
+
+    This route contains the main methods that will be used to display the views of the application.
+
+    ## Example
+    - Get some useful view data to display on the application (for each schema)
+    """
+
     crud_attr: APIRouter = APIRouter()  # crud routes for each attribute
     """
     # CRUD Routes
@@ -59,44 +70,12 @@ def define_routes():
     - Delete a resource by ID
     """
 
-    views: APIRouter = APIRouter()  # todo: views routes... for views xd
-    """
-    # Views Routes
-
-    This route contains the main methods that will be used to display the views of the application.
-
-    ## Example
-    - Get some useful view data to display on the application (for each schema)
-    """
-
     print(f"\n\033[0;30;47m{Config.NAME.value}\033[m\n")  # white bg
     return home, basic_dt, crud_attr, views  # * return all the routers...
 
-home, basic_dt, crud_attr, views = define_routes()
-
-# todo: ADD SOME NEW GENERATOR TO CREATE THE SQL_CALSSES USING SOME METADATA FROM THE DATABASE...
-# * this will allow to create the routes for each schema dynamically...
+home, basic_dt, views, crud_attr = define_routes()
 
 
-def _add_schema_routes(
-    db_dependency: Callable, 
-    schema: str = 'store', 
-    b_color: str = ""
-):
-    print(f"\033[0;30;{b_color}m{schema.capitalize()}\033[m")  # yellow bg
-
-    schema_dt_routes(db_dependency, basic_dt)
-    schema_view_routes(db_dependency, views)
-
-    for model in all_models.values():
-        crud_routes(
-            model[0],  # * SQLAlchemy Model 
-            model[1],  # * Pydantic Model
-            crud_attr,            
-            db_dependency, 
-            )
-
-# * Add routes for each schema...
-_add_schema_routes(get_db, b_color="43")
-
-# schema_dt_routes(partial(get_db, "school"), basic_dt)
+schema_view_routes(get_db, views, public_views)
+schema_dt_routes(get_db, basic_dt, store_models)
+[crud_routes(model[0], model[1], crud_attr, get_db) for model in store_models.values()]

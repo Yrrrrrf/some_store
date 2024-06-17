@@ -54,7 +54,7 @@
                 <!-- todo: Update the href to the actual API documentation URL-->
                 <a
                         class="btn btn-sm variant-ghost-surface"
-                        href="https://github.com/Yrrrrrf/academic_hub"
+                        href="https://github.com/Yrrrrrf/some_store"
                         target="_blank"
                         rel="noreferrer"
                 >GitHub</a>

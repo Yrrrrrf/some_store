@@ -1,13 +1,16 @@
 <h1 align="center">
-    <img src="./assets/icons/diary.png" alt="Academic Hub Icon" width="128">
-    <div align="center">Academic Hub</div>
+    <img src="./assets/icons/carts.png" alt="Some Store Icon" width="128">
+    <div align="center">Some Store</div>
 </h1>
 
-[<img alt="github" src="https://img.shields.io/badge/github-Yrrrrrf%2Facademic__hub-58A6FF?style=for-the-badge&logo=github" height="24">](https://github.com/Yrrrrrf/academic_hub)
+[<img alt="github" src="https://img.shields.io/badge/github-Yrrrrrf%2Fsome__store-58A6FF?style=for-the-badge&logo=github" height="24">](https://github.com/Yrrrrrf/some_store)
 
-[//]: # ([<img alt="documentation" src="https://img.shields.io/badge/documentation-100%25-66c2a5?style=for-the-badge&logo=read-the-docs&labelColor=555555" height="24">]&#40;#documentation-section&#41;)
+Manage the operations of a `generic store` through a comprehensive database and a robust API.
 
-Academic Hub is a comprehensive platform designed to manage academic resources and data, including library inventory, academic user information (students, teachers, etc.), grade history, and more. The system is built on a relational database, supporting various academic operations and providing detailed reports for educational institutions.
+The database consists of various tables and views that store critical information related to sales, products, customers, and inventory management.
+
+- The API, built using [FastAPI](https://fastapi.tiangolo.com/), provides endpoints for interacting with this data, allowing for efficient data retrieval, manipulation, and reporting.
+- The frontend application, built using [Svelte](https://svelte.dev/) provides a user-friendly interface for interacting with the API, allowing users to view & manipulate data in real-time.
 
 ## Setup
 
@@ -39,27 +42,16 @@ npm install  # install the required packages
 Create the [.env](./.env) file in the root directory and **add the following environment variables** to configure private database credentials:
 ```bash
 # * Database (PostgreSQL)
-DB_NAME = "academic_hub"
-DB_HOST = "localhost"
-DB_PORT = "5432"
-DB_OWNER = "postgres"
-DB_OWNER_PASSWORD = "fire"
+DB_NAME = "academic_hub"  # the name of the database to connect to
+DB_HOST = "localhost"  # the host of the database
+DB_PORT = "5432"  # default port
+DB_OWNER = "postgres"  # the superuser (owner) of the database
+DB_OWNER_PASSWORD = "some_password_here"  # the password of the superuser
 
-# * Authentication main settings
-SECRET_KEY = "some_secret_key"
-ALGORITHM = "HS256"
+# * Authentication (JWT)
+SECRET_KEY = "some_secret_key"  # used to sign the JWT tokens
+ALGORITHM = "HS256"  # algorithm used to sign the JWT tokens
 ACCESS_TOKEN_TIME = 30
-
-# * db admins credentials
-# these users are the ones that will be used to connect to the database (have access to only some schemas to manage an specific part of the system)
-INFRASTRUCTURE_ADMIN = "infrastructure_admin"
-INFRASTRUCTURE_PWORD = "some_new_infra_password"
-
-SCHOOL_ADMIN = "school_admin"
-SCHOOL_PWORD = "some_new_school_password"
-
-LIBRARY_ADMIN = "library_admin"
-LIBRARY_PWORD = "some_new_library_password"
 ```
 
 Execute the [00_create_db.sql](./sql/00_create_db.sql) file with a superuser to create the database to create the database.
@@ -68,7 +60,6 @@ Once created the database. Use the [setup.py](./src/setup.py) script to create t
 ```bash
 python src/setup.py
 ```
-
 
 ## Database Schema
 
@@ -82,7 +73,7 @@ uvicorn src.main:app --reload --host 127.0.0.1 --port 8000
 # or 
 python src/main.py  # run the API server (this way doesn't support live reload)
 ```
-- Look for the API documentation at [port/docs#/](http://127.0.0.1:8000/docs#/)
+- Look for the API documentation at [port/docs#/](http://127.0.0.1:8000/docs#/).
 
 - Excecute the frontend application using the following command:
 ```bash

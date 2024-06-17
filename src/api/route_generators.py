@@ -9,23 +9,28 @@ from src.api.database import *
 # * Add `get_tables` to the router & `get_columns` for each table
 def schema_dt_routes(
     db_dependency: Callable,
-    router: APIRouter
+    router: APIRouter,
+    models: Dict[str, Tuple[Type[Base], Type[BaseModel]]]  # type: ignore
 ):
     """
-    Add routes for the tables to the basic_dt router.
+    Add the routes to get the tables and columns of the database.
+
+    - GET /tables -> Get all the tables in the database.
+    - GET /{table}/columns -> Get all the columns of a table.
+    - GET /{table}/all -> Get all the resources of a table.
 
     Args:
         db_dependency (Callable): The dependency function to get the database session.
     """
     @router.get("/tables", response_model=List[str], tags=["Tables"])
-    def get_tables(): return [model[0].__tablename__ for model in all_models.values()]
+    def get_tables(): return [model[0].__tablename__ for model in models.values()]
 
-    def create_column_route(model: Type[Base]):  # type: ignore
+    def get_columns_route(model: Type[Base]):  # type: ignore
         @router.get(f"/{model.__tablename__}/columns", response_model=List[str], tags=[model.__tablename__.capitalize()])
         def get_columns(): return [c.name for c in model.__table__.columns]
         return get_columns
 
-    def get_all_resources_route(model: Tuple[Type[Base], Type[BaseModel]]):  # type: ignore
+    def get_all_route(model: Tuple[Type[Base], Type[BaseModel]]):  # type: ignore
         @router.get(f"/{model[0].__tablename__}/all", tags=[model[0].__tablename__.capitalize()], response_model=List[model[1]])
         def get_all(
             db: Session = Depends(db_dependency),
@@ -39,106 +44,53 @@ def schema_dt_routes(
 
         return get_all
 
+    # Add the 'get_columns' & 'get_all' routes for each table
+    for model in models.values():
+        get_columns_route(model[0])
+        get_all_route(model)
 
-    for model in all_models.values():
-        create_column_route(model[0])
-        get_all_resources_route(model)
 
-
-# # * Add all views to the router
 def schema_view_routes(
     db_dependency: Callable,
     router: APIRouter,
+    models: Dict[str, Tuple[Type[Base], Type[BaseModel]]]  # type: ignore
 ):
-    @router.get("/views", tags=['Views'], response_model=List[str])
-    def get_views(db: Session = Depends(db_dependency)):
-        query = text("SELECT table_name FROM information_schema.views WHERE table_schema = 'public'")
-        result = db.execute(query).fetchall()
-        return [row[0] for row in result]
+    # todo: Complete & fix this method to add the views routes for the db!
+    def generate_get_all_route(
+        model: Type[Base],  # type: ignore
+        pydantic_model: Type[BaseModel], 
+        db_dependency: Callable
+    ):
+        @router.get(f"/views", response_model=List[str], tags=["Views"])
+        def get_views(): return [model.__tablename__ for model, _ in models.values()]
 
-    # def create_view_route(view: str):
-    #     QueryParamModel: Type[BaseModel] = create_pydantic_model(
-    #         next(db_dependency()),
-    #         view,
-    #         f"{view}QueryParams"
-    #     )
-
-    #     @router.get(f"/view/{view}", tags=["Views"], response_model=List[QueryParamModel])
-    #     def get_view(
-    #         db: Session = Depends(db_dependency),
-    #         # filters: QueryParamModel = Depends()  # type: ignore
-    #     ):
-    #         base_query: str = f"SELECT * FROM {view}"
-    #         result = db.execute(text(base_query)).fetchall()
-    #         return result
-
-    
-    # views = next(db_dependency()).execute(
-    #     text("SELECT table_name FROM information_schema.views WHERE table_schema = 'public'")
-    # ).fetchall()
-
-    # for view in [row[0] for row in views]:
-    #     print(f'\n{view}')
-    #     create_view_route(view)
-
-
-    def create_view_route(view: str):
-        QueryParamModel: Type[BaseModel] = create_pydantic_model(
-            next(db_dependency()),
-            view,
-            f"{view}QueryParams"
-        )
-
-        @router.get(f"/view/{view}", tags=["Views"], response_model=List[QueryParamModel])
-        def get_view(
-            db: Session = Depends(db_dependency),
-            filters: QueryParamModel = Depends()
+        @router.get(f"/view/{model.__tablename__}", response_model=List[pydantic_model], tags=["Views"])
+        def get_all(
+            filters: pydantic_model = Depends(),
+            db: Session = Depends(db_dependency)
         ):
-            base_query: str = f"SELECT * FROM {view}"
-            where_clauses = []
-            params = {}
+            query = db.query(model)
+            filters_dict: Dict[str, Any] = filters.model_dump()
 
-            for field, value in filters.dict().items():
-                if value is not None:
-                    where_clauses.append(f"{field} = :{field}")
-                    params[field] = value
+            # * If any of the values is not None, filter by it
+            if any(value is not None for value in filters_dict.values()):
+                print("Filtering by:")
+                for attr, value in filters_dict.items():
+                    if value is not None:
+                        print(f"\t{attr:>20} -> {value}")
+                        query = query.filter(getattr(model, attr) == value)
 
-            if where_clauses:
-                base_query += " WHERE " + " AND ".join(where_clauses)
+                # * Same as above, but using a list comprehension... (same but it's less readable)
+                # query = query.filter(*[getattr(model, attr) == value for attr, value in filters_dict.items() if value is not None])
 
-            result = db.execute(text(base_query), params).fetchall()
-            print(result)
-            return result
+            results = query.all()
+            print(f"Query results: {len(results)}")
+            return results
 
-    views = next(db_dependency()).execute(
-        text("SELECT table_name FROM information_schema.views WHERE table_schema = 'public'")
-    ).fetchall()
+        return get_all
 
-    for view in [row[0] for row in views]:
-        create_view_route(view)
-
-
-
-    # def get_all_views_route(
-    #     model: Tuple[Type[Base], Type[BaseModel]],
-    #     ):
-    #     @router.get(f"/view/{model[0].__tablename__}", tags=["Views"], response_model=List[model[1]])
-    #     def get_view(
-    #         db: Session = Depends(db_dependency),
-    #         # filters: model[1] = Depends()  # type: ignore
-    #     ):
-    #         query = db.query(model[0])
-    #         # for attr, value in filters.dict().items():
-    #         #     if value is not None:  # if the value is not None, filter by it
-    #         #         query = query.filter(getattr(model[0], attr) == value)
-    #         return query.all()
-
-    #     return get_view
-
-
-    # for model in all_view_models.values():
-    #     get_all_views_route(model)
-
+    for _, (sqlalchemy_model, pydantic_model) in models.items():
+        generate_get_all_route(sqlalchemy_model, pydantic_model, db_dependency)
 
 
 # * CRUD Operations Routes (GET, POST, PUT, DELETE)
@@ -152,7 +104,7 @@ def crud_routes(
     # * POST (Create)
     @router.post(f"/{sqlalchemy_model.__tablename__.lower()}", tags=[sqlalchemy_model.__name__], response_model=pydantic_model)
     def create_resource(resource: pydantic_model, db: Session = Depends(db_dependency)):
-        db_resource: Base = sqlalchemy_model(**resource.dict())  # type: ignore
+        db_resource: Base = sqlalchemy_model(resource.model_dump())  # type: ignore
         db.add(db_resource)
         try:
             db.commit()
