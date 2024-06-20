@@ -100,10 +100,10 @@
                 {#each columns as column}
                     <th>
                         <input
-                                type="text"
-                                placeholder={`Filter ${capitalize(column)}`}
-                                bind:value={$columnFilters[column]}
-                                class="variant-ghost-secondary rounded-xl"
+                            type="text"
+                            placeholder={`Filter ${capitalize(column)}`}
+                            bind:value={$columnFilters[column]}
+                            class="variant-ghost-secondary rounded-xl"
                         />
                     </th>
                 {/each}

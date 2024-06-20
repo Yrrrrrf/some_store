@@ -31,7 +31,6 @@
 
 <svelte:head>
     <title>Some Store</title>
-    <link rel="icon" type="image/png" href="/img/favicon.png" />
 </svelte:head>
 
 <AppShell>
@@ -66,6 +65,5 @@
     <slot />  <!-- Page Route Content -->
 
 </AppShell>
-
 
 <div class="fixed bottom-0 left-0 p-2 bg-soft-tertiary text-white text-sm">API URL: <code>{apiUrl}</code></div>

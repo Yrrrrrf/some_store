@@ -76,6 +76,8 @@ def define_routes() -> Tuple[APIRouter, APIRouter, APIRouter, APIRouter]:
 home, basic_dt, views, crud_attr = define_routes()
 
 
-schema_view_routes(get_db, views, public_views)
 schema_dt_routes(get_db, basic_dt, store_models)
-[crud_routes(model[0], model[1], crud_attr, get_db) for model in store_models.values()]
+schema_view_routes(get_db, views, public_views)
+# * Add all the CRUD routes for each view
+for sqlalchemy_model, pydantic_model in store_models.values():
+    crud_routes(sqlalchemy_model, pydantic_model, crud_attr, get_db)

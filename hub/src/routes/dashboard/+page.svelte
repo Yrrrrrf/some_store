@@ -10,64 +10,37 @@
     let apiUrl: string = '';
     $: api_url.subscribe(value => apiUrl = value);
 
-    let currentView: string = '';
-    $: current_view.subscribe(value => currentView = value);
-
     let currentTab: string = '';
     $: current_tab.subscribe(value => currentTab = value);
 
-    let currentTable: string = '';
-    $: current_table.subscribe(value => currentTable = value);
-
     // ^ Defining the tabs
-    // * TABLES -> ALL
-    // * VIEWS -> 
     let tabs: string[] = ['tables', 'views', 'some'];
     // ^ Defining the tables and views
     let tables: string[] = [];
     let views: string[] = [];
     // ^ Defining the table data (used to display the table rows)
-    let tableData: any[] = [];
 
     onMount(() => {
         fetchTables(apiUrl, (data) => tables = data);
         fetchViews(apiUrl, (data) => views = data);
     });
 
-    function resetTable(): void {
-        tableData = [];
-    }
-
-    function updateSelectedTab(): void {
-        resetTable();
-        current_tab.set(currentTab);
-    }
-
-    function updateSelectedView(view: string): void {
-        current_view.set(view);
-        fetchViewRows(apiUrl, view, (data) => tableData = data);
-    }
-
-    function updateSelectedTable(table: string): void {
-        current_table.set(table);
-        fetchTableRows(apiUrl, table, (data) => tableData = data);
-    }
 </script>
 
 <h1 class="text-2xl">Data View</h1>
 
 <TabGroup>
     {#each tabs as tab}
-        <Tab bind:group={currentTab} name={tab} value={tab} on:change={updateSelectedTab}>
+        <Tab bind:group={currentTab} name={tab} value={tab} on:change={() => current_tab.set(currentTab)}>
             {tab.toUpperCase()}
         </Tab>
     {/each}
 </TabGroup>
 
 {#if currentTab === 'views'}
-    <TabContent items={views} currentItem={currentView} updateSelectedItem={updateSelectedView} {tableData}/>
+    <TabContent items={views} t_type="views"/>
 {/if}
 
 {#if currentTab === 'tables'}
-    <TabContent items={tables} currentItem={currentTable} updateSelectedItem={updateSelectedTable} {tableData}/>
+    <TabContent items={tables} t_type="tables"/>
 {/if}

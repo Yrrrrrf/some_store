@@ -13,8 +13,10 @@ export function snakeToCamelWithSpaces(str: string): string {
         .join(' ');
 }
 
-export async function fetchTableRows(apiUrl: string, table: string, setData: (data: any[]) => void): Promise<void> {
-    const request_url = `${apiUrl}/${table.replace(/ /g, '_').toLowerCase()}/all`;
+export async function fetchTableRows(apiUrl: string, table: string, formData: any, setData: (data: any[]) => void): Promise<void> {
+    const queryParams = new URLSearchParams(formData).toString();
+    console.log('Query Params:', queryParams);
+    const request_url = `${apiUrl}/${table.replace(/ /g, '_').toLowerCase()}?${queryParams}`;
     console.log('Request URL:', request_url);
     try {
         const response = await fetch(request_url, {
@@ -35,6 +37,7 @@ export async function fetchTableRows(apiUrl: string, table: string, setData: (da
         console.error('Error:', error);
     }
 }
+
 
 export async function fetchTables(apiUrl: string, setTables: (tables: string[]) => void): Promise<void> {
     const request_url = `${apiUrl}/tables`;
@@ -77,9 +80,13 @@ export async function fetchViews(apiUrl: string, setViews: (views: string[]) => 
     }
 }
 
+// export async function fetchViewRows(apiUrl: string, view: string, setData: (data: any[]) => void): Promise<void> {
+export async function fetchViewRows(apiUrl: string, view: string, formData: any, setData: (data: any[]) => void): Promise<void> {
+    // const request_url = `${apiUrl}/view/${view.replace(/ /g, '_').toLowerCase()}`;
+    const queryParams = new URLSearchParams(formData).toString();
+    console.log('Query Params:', queryParams);
+    const request_url = `${apiUrl}/view/${view.replace(/ /g, '_').toLowerCase()}?${queryParams}`;
 
-export async function fetchViewRows(apiUrl: string, view: string, setData: (data: any[]) => void): Promise<void> {
-    const request_url = `${apiUrl}/view/${view.replace(/ /g, '_').toLowerCase()}`;
     console.log('Request URL:', request_url);
     try {
         const response = await fetch(request_url, {
@@ -94,6 +101,29 @@ export async function fetchViewRows(apiUrl: string, view: string, setData: (data
             console.log(`Rows for ${view}:`, data);
         } else {
             throw new Error('Failed to fetch rows');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+
+// function that gets the columns of a table
+export async function fetchColumns(apiUrl: string, table: string, setColumns: (columns: string[]) => void): Promise<void> {
+    const request_url = `${apiUrl}/${table.replace(/ /g, '_').toLowerCase()}/columns`;
+    console.log('Request URL:', request_url);
+    try {
+        const response = await fetch(request_url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            setColumns(data);
+        } else {
+            throw new Error('Failed to fetch columns');
         }
     } catch (error) {
         console.error('Error:', error);

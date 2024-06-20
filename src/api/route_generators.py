@@ -1,10 +1,14 @@
 from fastapi import Depends, HTTPException, APIRouter
 from sqlalchemy.orm import Session
-from sqlalchemy import Integer, text
+from sqlalchemy import Integer
 from pydantic import BaseModel
 from typing import *
 from src.api.database import *
 
+
+# todo: CHECK THE 'schema_dt_routes' & 'schema_view_routes' METHODS
+# todo: They're probably the same, so I should merge them into one method
+# todo: fn schema_dr_routes -> (...)
 
 # * Add `get_tables` to the router & `get_columns` for each table
 def schema_dt_routes(
@@ -31,7 +35,7 @@ def schema_dt_routes(
         return get_columns
 
     def get_all_route(model: Tuple[Type[Base], Type[BaseModel]]):  # type: ignore
-        @router.get(f"/{model[0].__tablename__}/all", tags=[model[0].__tablename__.capitalize()], response_model=List[model[1]])
+        @router.get(f"/{model[0].__tablename__}", tags=[model[0].__tablename__.capitalize()], response_model=List[model[1]])
         def get_all(
             db: Session = Depends(db_dependency),
             filters: model[1] = Depends()  # type: ignore
@@ -49,7 +53,7 @@ def schema_dt_routes(
         get_columns_route(model[0])
         get_all_route(model)
 
-
+# * Add the routes to get the views and columns of the database
 def schema_view_routes(
     db_dependency: Callable,
     router: APIRouter,
@@ -63,6 +67,10 @@ def schema_view_routes(
     ):
         @router.get(f"/views", response_model=List[str], tags=["Views"])
         def get_views(): return [model.__tablename__ for model, _ in models.values()]
+
+        # get vews columns
+        @router.get(f"/view/{model.__tablename__}/columns", response_model=List[str], tags=["Views"])
+        def get_columns(): return [c.name for c in model.__table__.columns]
 
         @router.get(f"/view/{model.__tablename__}", response_model=List[pydantic_model], tags=["Views"])
         def get_all(
@@ -91,7 +99,6 @@ def schema_view_routes(
 
     for _, (sqlalchemy_model, pydantic_model) in models.items():
         generate_get_all_route(sqlalchemy_model, pydantic_model, db_dependency)
-
 
 # * CRUD Operations Routes (GET, POST, PUT, DELETE)
 def crud_routes(
