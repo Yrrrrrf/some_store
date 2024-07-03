@@ -1,32 +1,18 @@
 <script lang="ts">
-	import '../app.postcss';
-
+    import '../app.postcss';
     import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
+    import { setContext } from 'svelte';
+    import { writable } from 'svelte/store';
+    import SomeThemeSelector from './SomeThemeSelector.svelte';
+    import { initializeHighlightJS, initializeFloatingUI } from '$lib/utils/initialization';
 
-    import { api_url } from '../utils';
+    // Create a store for the API URL and set it in the context
+    const apiUrl = writable('http://127.0.0.1:8000');
+    setContext('apiUrl', apiUrl);
 
-    let apiUrl: string = '';
-    $: api_url.subscribe(value => apiUrl = value);
-
-	// Highlight JS
-	import hljs from 'highlight.js/lib/core';
-	import 'highlight.js/styles/github-dark.css';
-	import { storeHighlightJs } from '@skeletonlabs/skeleton';
-	import xml from 'highlight.js/lib/languages/xml'; // for HTML
-	import css from 'highlight.js/lib/languages/css';
-	import javascript from 'highlight.js/lib/languages/javascript';
-	import typescript from 'highlight.js/lib/languages/typescript';
-
-	hljs.registerLanguage('xml', xml); // for HTML
-	hljs.registerLanguage('css', css);
-	hljs.registerLanguage('javascript', javascript);
-	hljs.registerLanguage('typescript', typescript);
-	storeHighlightJs.set(hljs);
-
-	// Floating UI for Popups
-	import { computePosition, autoUpdate, flip, shift, offset, arrow } from '@floating-ui/dom';
-	import { storePopup } from '@skeletonlabs/skeleton';
-	storePopup.set({ computePosition, autoUpdate, flip, shift, offset, arrow });
+    // Initialize Highlight.js and Floating UI
+    initializeHighlightJS();
+    initializeFloatingUI();
 </script>
 
 <svelte:head>
@@ -35,7 +21,6 @@
 
 <AppShell>
     <svelte:fragment slot="header">
-        <!-- App Bar -->
         <AppBar>
             <svelte:fragment slot="lead">
                 <strong class="text-xl uppercase pr-2">Welcome to</strong>
@@ -43,27 +28,29 @@
             </svelte:fragment>
 
             <svelte:fragment slot="trail">
+                <SomeThemeSelector />
                 <LightSwitch />
                 <a
-                        class="btn btn-sm variant-ghost-primary"
-                        href="{apiUrl}/docs"
-                        target="_blank"
-                        rel="noreferrer"
+                class="btn btn-sm variant-ghost-primary"
+                href="{$apiUrl}/docs"
+                target="_blank"
+                rel="noreferrer"
                 >API Docs</a>
-                <!-- todo: Update the href to the actual API documentation URL-->
                 <a
-                        class="btn btn-sm variant-ghost-surface"
-                        href="https://github.com/Yrrrrrf/some_store"
-                        target="_blank"
-                        rel="noreferrer"
+                class="btn btn-sm variant-ghost-surface"
+                href="https://github.com/Yrrrrrf/some_store"
+                target="_blank"
+                rel="noreferrer"
                 >GitHub</a>
             </svelte:fragment>
-
         </AppBar>
     </svelte:fragment>
 
-    <slot />  <!-- Page Route Content -->
+    <slot />
 
+    <svelte:fragment slot="footer">
+        <div class="fixed bottom-0 left-0 p-2 bg-surface-500/10 text-surface-600-300-token text-sm">
+            API URL: <code>{$apiUrl}</code>
+        </div>
+    </svelte:fragment>
 </AppShell>
-
-<div class="fixed bottom-0 left-0 p-2 bg-soft-tertiary text-white text-sm">API URL: <code>{apiUrl}</code></div>

@@ -1,99 +1,101 @@
 <script lang="ts">
-    import SomeTable from './SomeTable.svelte';
-    import { writable, get } from 'svelte/store';
-    import { api_url, current_tab, current_table, current_view, fetchTableRows, fetchColumns, fetchViewRows } from "../../utils";
-    import { onMount } from "svelte";
+    import { fade, fly } from 'svelte/transition';
+    import { snakeToCamelWithSpaces, fetchTableRows, fetchViewRows, fetchColumns } from '../../utils';
+    import { api_url, current_view, current_table } from '../../utils';
+    import { exportDataToPDF } from '$lib/utils/export_pdf';
 
-    // ^ Subscribing to the store values
-    let apiUrl: string = '';
-    $: api_url.subscribe(value => apiUrl = value);
-
-    let currentTab: string = '';
-    $: current_tab.subscribe(value => currentTab = value);
+    import SomeSearchBar from './SomeSearchBar.svelte';
+    import SomeViewToggle from './SomeViewToggle.svelte';
+    import SomeItemList from './SomeItemList.svelte';
+    import SomeSelectedItemView from './SomeSelectedItemView.svelte';
 
     export let items: string[] = [];
-    export let t_type: string = '';
+    export let t_type: 'tables' | 'views';
 
-    let currentItem: string = '';
+    let apiUrl: string;
+    api_url.subscribe(value => apiUrl = value);
+
+    let searchTerm = '';
+    let selectedItem: string | null = null;
     let tableData: any[] = [];
-    let formData = writable({});
-
-    function handleInputChange(column, value) {
-        formData.update(currentData => {
-            currentData[column] = value;
-            return currentData;
-        });
-    }
-
-    function submitForm() {
-        const formDataObj = get(formData);
-        fetchData(apiUrl, currentItem, formDataObj, (data) => {
-            tableData = data;
-            formData.set({}); // Reset formData after fetching data
-        });
-    }
-
-    function fetchData(apiUrl: string, item: string, formData: any, setData: (data: any[]) => void): Promise<void> {
-        if (currentTab === 'tables') {
-            return fetchTableRows(apiUrl, item, formData, setData);
-        } else if (currentTab === 'views') {
-            return fetchViewRows(apiUrl, item, formData, setData);
-        }
-        return Promise.resolve();
-    }
-
-    function resetTable(): void {
-        tableData = [];
-    }
-
+    let isLoading = false;
+    let viewMode: 'grid' | 'list' = 'grid';
     let columns: string[] = [];
-    function updateSelectedButton(item: string): void {
-        resetTable();
-        currentItem = item;
-        currentTab === 'tables' ? current_table.set(item) : current_view.set(item);
-        fetchColumns(apiUrl, t_type === 'tables' ? `${item}` : `view/${item}`, (data) => columns = data);
+    let formData: { [key: string]: string } = {};
+    let showFilterForm = false;
+
+    $: filteredItems = filterItems(items, searchTerm);
+
+    function normalizeString(str: string): string {
+        return str.toLowerCase().replace(/[_\s]/g, '');
     }
 
-    // Reactive statement to reset formData and hide table when currentItem changes
-    $: currentItem, formData.set({});
+    function filterItems(items: string[], term: string): string[] {
+        const normalizedTerm = normalizeString(term);
+        return items.filter(item => normalizeString(item).includes(normalizedTerm));
+    }
+
+    async function handleItemClick(item: string) {
+        isLoading = true;
+        selectedItem = item;
+        formData = {};
+        showFilterForm = false;
+
+        const store = t_type === 'tables' ? current_table : current_view;
+        store.set(item);
+
+        if (t_type === 'tables') {
+            await fetchColumns(apiUrl, item, setColumns);
+            await fetchTableRows(apiUrl, item, {}, setTableData);
+        } else {
+            await fetchViewRows(apiUrl, item, {}, (data) => {
+                setTableData(data);
+                setColumns(Object.keys(data[0] || {}));
+            });
+        }
+
+        isLoading = false;
+    }
+
+    function setColumns(data: string[]) {
+        columns = data;
+        columns.forEach(col => formData[col] = '');
+    }
+
+    function setTableData(data: any[]) {
+        tableData = data;
+    }
+
+    async function handleSubmit() {
+        isLoading = true;
+        const fetchFunction = t_type === 'tables' ? fetchTableRows : fetchViewRows;
+        await fetchFunction(apiUrl, selectedItem!, formData, setTableData);
+        isLoading = false;
+    }
 </script>
 
-<!-- BUTTONS FOR EACH TABLE -->
-
-<div class="mt-4 flex flex-wrap gap-4">
-    {#each items as item}
-        <button on:click={() => updateSelectedButton(item)} class="btn variant-filled-primary">
-            {item}
-        </button>
-    {/each}
-</div>
-
-<!-- FORM FOR TABLE DATA (modify the query parameters) -->
-
-{#if columns.length > 0}
-    <div class="variant-glass-surface p-10 rounded-lg shadow-lg z-50 max-w-md w-full">
-        <strong class="h3 uppercase flex justify-center">{currentItem} QUERY</strong>
-        <form class="flex flex-col space-y-4">
-            {#each columns as column}
-                <div class="mb-2">
-                    <label for={column} class="block font-medium text-gray-400 label">{column}</label>
-                    <input
-                            type="text"
-                            id={column}
-                            name={column}
-                            bind:value={$formData[column]}
-                            on:input={(e) => handleInputChange(column, e.target.value)}
-                            class="input variant-ghost-secondary w-full p-2 border rounded-md"
-                            placeholder="Enter the value for {column}"
-                    />
-                </div>
-            {/each}
-
-            <button type="button" on:click={submitForm} class="btn variant-filled-primary w-1/2 self-center mt-4">
-                Submit
-            </button>
-        </form>
+<div in:fade="{{ duration: 300 }}" class="space-y-4">
+    <div class="flex items-center justify-between">
+        <SomeSearchBar bind:searchTerm {t_type} />
+        <SomeViewToggle bind:viewMode />
     </div>
-{/if}
 
-<SomeTable {currentItem} {tableData}/>
+    <SomeItemList
+            {viewMode}
+            filteredItems={filteredItems}
+            {t_type}
+            handleItemClick={handleItemClick}
+    />
+
+    {#if selectedItem}
+        <SomeSelectedItemView
+                {selectedItem}
+                bind:showFilterForm
+                {columns}
+                bind:formData
+                {handleSubmit}
+                {isLoading}
+                {tableData}
+        />
+    {/if}
+</div>

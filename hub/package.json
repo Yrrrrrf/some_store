@@ -36,6 +36,9 @@
     "@vincjo/datatables": "^1.14.10",
     "highlight.js": "11.9.0",
     "jquery": "^3.7.1",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2",
+    "lucide-svelte": "^0.399.0",
     "svelte-datatables-net": "^0.0.11",
     "svelte-dnd-action": "^0.9.48",
     "tabulator-tables": "^6.2.1"
