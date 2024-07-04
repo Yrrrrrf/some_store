@@ -1,95 +1,79 @@
--- ACADEMIC HUB DATABASE SCHEMA
+-- File: 01_set_schemas.sql
+-- ... [Previous parts of the file remain unchanged] ...
 
-
-DO $$
+-- Function to add new role and grant privileges on specified schemas
+-- This function allows easy addition of new roles with privileges on multiple existing schemas
+CREATE OR REPLACE FUNCTION add_schema_and_role(
+    p_role_name TEXT,         -- Name of the new role
+    p_schema_names TEXT[]     -- Array of schema names to grant privileges on
+) RETURNS VOID AS $$
 DECLARE
-    schemas TEXT[] := ARRAY[  -- List of all schema names
-        'store'
---         'infrastructure_management',  -- infrastructure management schema
---         'library_management',  -- library management schema
---         'school_management'  -- school management schema
---         'payment_management'
-        ];
     schema_name TEXT;
 BEGIN
-    FOREACH schema_name IN ARRAY schemas LOOP
-        EXECUTE format('DROP SCHEMA IF EXISTS %I CASCADE', schema_name);
-        EXECUTE format('CREATE SCHEMA IF NOT EXISTS %I', schema_name);
-    END LOOP;
-END $$;
-
-SET search_path TO auth;  -- Set search path first
-
--- Create the role that will be used to manage one specific schema (some admin role)
-CREATE OR REPLACE FUNCTION create_and_grant_role(
-    role_name TEXT,
-    role_password TEXT,
-    schema_names TEXT[] -- array of schema names
-) RETURNS VOID AS $$
-DECLARE  -- Declare variables (for dynamic SQL)
-    schema_name TEXT;  -- Variable to store schema name
-BEGIN
-    -- Create role if it does not exist
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = role_name) THEN
-        EXECUTE format('CREATE ROLE %I WITH LOGIN PASSWORD %L', role_name, role_password);
-        RAISE NOTICE 'Role % created successfully.', role_name;
-    ELSE RAISE NOTICE 'Role % already exists.', role_name;
+    -- Create role
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = p_role_name) THEN
+        EXECUTE format('CREATE ROLE %I WITH LOGIN PASSWORD %L', p_role_name, p_role_name || '_password');
+        RAISE NOTICE 'Role % created', p_role_name;
+    ELSE
+        RAISE NOTICE 'Role % already exists', p_role_name;
     END IF;
 
-    FOREACH schema_name IN ARRAY schema_names LOOP  -- Loop through each schema and grant privileges
-        -- Grant usage and create privileges on schema
-        EXECUTE format('GRANT USAGE, CREATE ON SCHEMA %I TO %I', schema_name, role_name);
-        EXECUTE format('GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA %I TO %I', schema_name, role_name);
-        EXECUTE format('GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA %I TO %I', schema_name, role_name);
-        -- Grant default privileges on schema (for future tables and sequences)
-        EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT ALL PRIVILEGES ON SEQUENCES TO %I', schema_name, role_name);
-        EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT ALL PRIVILEGES ON SEQUENCES TO %I', schema_name, role_name);
+    -- Grant privileges on specified schemas
+    FOREACH schema_name IN ARRAY p_schema_names
+    LOOP
+        -- Check if schema exists
+        IF NOT EXISTS (SELECT FROM information_schema.schemata WHERE schema_name = schema_name) THEN
+            RAISE EXCEPTION 'Schema % does not exist', schema_name;
+        END IF;
+
+        -- Grant privileges on the schema
+        EXECUTE format('GRANT USAGE, CREATE ON SCHEMA %I TO %I', schema_name, p_role_name);
+        EXECUTE format('GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA %I TO %I', schema_name, p_role_name);
+        EXECUTE format('GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA %I TO %I', schema_name, p_role_name);
+        EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT ALL PRIVILEGES ON TABLES TO %I', schema_name, p_role_name);
+        EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT ALL PRIVILEGES ON SEQUENCES TO %I', schema_name, p_role_name);
+        EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA %I GRANT ALL PRIVILEGES ON FUNCTIONS TO %I', schema_name, p_role_name);
+
+        RAISE NOTICE 'Privileges granted to % on schema %', p_role_name, schema_name;
     END LOOP;
+
+    -- Grant public schema access
+    EXECUTE format('GRANT USAGE, CREATE ON SCHEMA public TO %I', p_role_name);
+    EXECUTE format('GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO %I', p_role_name);
+    EXECUTE format('GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO %I', p_role_name);
+    EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO %I', p_role_name);
+    EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO %I', p_role_name);
+    EXECUTE format('ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON FUNCTIONS TO %I', p_role_name);
+
+    RAISE NOTICE 'Public schema privileges granted to %', p_role_name;
+
+    RAISE NOTICE 'Role % created and granted privileges on specified schemas', p_role_name;
 END;
 $$ LANGUAGE plpgsql;
 
+-- Example usage of the improved add_schema_and_role function
+-- To add a new role with privileges on multiple schemas, use:
+-- SELECT add_schema_and_role('new_role', ARRAY['schema1', 'schema2', 'schema3']);
 
--- Create roles and grant privileges to them...
+-- Note: Ensure that the schemas exist before calling this function.
+-- You may want to create schemas separately before using this function.
 
-SELECT create_and_grant_role(
-    'store_owner',
-    'store_password',
-    ARRAY['public', 'store']
-);
+-- Function to create a new schema (if needed)
+CREATE OR REPLACE FUNCTION create_schema_if_not_exists(
+    p_schema_name TEXT
+) RETURNS VOID AS $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM information_schema.schemata WHERE schema_name = p_schema_name) THEN
+        EXECUTE format('CREATE SCHEMA %I', p_schema_name);
+        RAISE NOTICE 'Schema % created', p_schema_name;
+    ELSE
+        RAISE NOTICE 'Schema % already exists', p_schema_name;
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
 
-SELECT create_and_grant_role(
-    'school_admin',
-    'school_password',
-    ARRAY['public', 'infrastructure_management',  'school_management']
-);
-
-SELECT create_and_grant_role(
-    'library_admin',
-    'library_password',
-    ARRAY['public', 'infrastructure_management', 'library_management']
-);
-
--- SELECT create_and_grant_role(
---     'payment_admin',
---     'some_payment_password',
---     ARRAY['public', 'payment_management']
--- );
-
--- SELECT create_and_grant_role(
---     'security_admin',
---     'some_security_password',
--- --     ARRAY['public', 'security_management']
--- );
-
-
--- todo: Fix the error that do not allow to grant privileges to the roles!
--- The error only happens when using this file as executable script for src/setup.py
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public, infrastructure_management TO infrastructure_admin;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public, infrastructure_management TO infrastructure_admin;
-
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public, infrastructure_management, school_management TO school_admin;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public, infrastructure_management, school_management TO school_admin;
-
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public, infrastructure_management, library_management TO library_admin;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public, infrastructure_management, library_management TO library_admin;
-
+-- Example of creating schemas and then adding a role with privileges
+SELECT create_schema_if_not_exists('store');
+-- SELECT create_schema_if_not_exists('some_other_schema');
+-- SELECT create_schema_if_not_exists('another_schema');
+-- SELECT add_schema_and_role('new_role', ARRAY['store', 'some_other_schema', 'another_schema']);

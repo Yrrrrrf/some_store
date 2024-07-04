@@ -1,244 +1,176 @@
-from datetime import date, datetime, time
-from re import T
-from dotenv import load_dotenv
-from fastapi import Depends
-from fastapi.background import P
-from pydantic import BaseModel, create_model
-from sqlalchemy import Engine, create_engine, MetaData, Column, Boolean, Integer, Numeric, Text, String, Date, Time, DateTime, JSON, text
-from sqlalchemy.orm import sessionmaker, Session, declarative_base, DeclarativeMeta
+# database.py
+
+from typing import Dict, List, Tuple as PyTuple, Type, Any, Optional
+from sqlalchemy import *
+from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.ext.declarative import declared_attr
-from typing import Type, Any, Dict, List, Optional, Tuple
-# Load environment variables from .env file
+from pydantic import BaseModel, create_model
+from dotenv import load_dotenv
+import os
+
+from datetime import date, time, datetime
+
+# Load environment variables
 load_dotenv()
 
-# Database URL
-db_url: str = f"postgresql://postgres:fire@localhost/some_store"
-engine = create_engine(db_url)
 
-def get_db():
-    """
-    Yields a database session.
-    """
-    db: Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)()
-    try:
-        yield db
-    finally:
-        db.close()
+# Database connection
+class DatabaseManager:
+    """Manages database connection and session creation."""
 
+    def __init__(self):
+        self.db_url = self._get_db_url()
+        self.engine = create_engine(self.db_url)
+        self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
+
+    @staticmethod
+    def _get_db_url() -> str:
+        """Construct database URL from environment variables."""
+        # db_user = os.getenv("DB_USER", "some_store_owner")
+        # db_password = os.getenv("DB_PASSWORD", "store_password")
+        # db_host = os.getenv("DB_HOST", "localhost")
+        # db_name = os.getenv("DB_NAME", "some_store")
+        # return f"postgresql://{db_user}:{db_password}@{db_host}/{db_name}"
+        return f"postgresql://some_store_owner:store_password@localhost/some_store"
+
+    def get_db(self):
+        """Yield a database session."""
+        db = self.SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+
+# Model generation
 Base = declarative_base()
 
-# Unified mapping of SQL types to SQLAlchemy and Pydantic types
-SQL_TYPE_MAPPING = {
-    'boolean': (Boolean, bool),
-    'integer': (Integer, int),
-    'numeric': (Numeric, float),
-    'bigint': (Integer, int),
-    'text': (Text, str),
-    'varchar': (String, str),
-    'character varying': (String, str),
-    'date': (Date, date),
-    'time': (Time, time),
-    'timestamp': (DateTime, datetime),
-    'datetime': (DateTime, datetime),
-    'jsonb': (JSON, dict),
-    'string_type': (String, str),
-    'text': (String, str),
-}
+class ModelGenerator:
+    """Generates SQLAlchemy and Pydantic models from database metadata."""
 
-def generate_sqlalchemy_model_class(
-    table_name: str, 
-    columns: List[Tuple[str, str]], 
-    primary_keys: List[str], 
-    schema: str, 
-) -> Type[Base]:  # Generate SQLAlchemy model class from table metadata  # type: ignore
-    attrs = {
-        '__tablename__': table_name,
-        '__table_args__': {'schema': schema}
+    SQL_TYPE_MAPPING = {
+        'character varying': (String, str),
+        'boolean': (Boolean, bool),
+        'integer': (Integer, int),
+        'numeric': (Numeric, float),
+        'bigint': (BigInteger, int),
+        'text': (Text, str),
+        'varchar': (String, str),
+        'date': (Date, date),
+        'time': (Time, time),
+        'timestamp': (DateTime, datetime),
+        'datetime': (DateTime, datetime),
+        'jsonb': (JSON, dict),
+        'string_type': (String, str),
     }
 
-    for column_name, column_type in columns:
-        column_class, _ = SQL_TYPE_MAPPING.get(column_type, (String, str))  # Default to String if type not found
-        print(f"\tColumn {column_name:^16} {column_type:>24} -> {column_class.__name__}")  # Log column type mapping
-        # column_kwargs: dict[str, Any] = {'primary_key': column_name in primary_keys} if not is_view else {}
-        column_kwargs: dict[str, Any] = {'primary_key': column_name in primary_keys}
-        attrs[column_name] = Column(column_class, **column_kwargs)  # Add column to model
+    @classmethod
+    def generate_sqlalchemy_model(
+        cls, 
+        table_name: str, 
+        columns: List[PyTuple[str, str]], 
+        primary_keys: List[str], 
+        schema: str
+    ) -> Type[Base]:
+        """Generate SQLAlchemy model class from table metadata."""
+        attrs = {
+            '__tablename__': table_name,
+            '__table_args__': {'schema': schema}
+        }
 
-    print(f"\tPrimary keys: {primary_keys}")
-    print(f"\tAttributes: {attrs}")
-    model_class = type(table_name.capitalize(), (Base,), attrs)
-    print(f"Generated SQLAlchemy model class for table '{table_name}' in schema '{schema}': {model_class.__dict__}")
-    return model_class
+        print(f"\t\tSQLAlchemy Model")
+        for column_name, column_type in columns:
+            print(f"\t\t\tColumn: {column_name}: {column_type}")
+            column_class, _ = cls.SQL_TYPE_MAPPING.get(column_type, (String, str))
+            attrs[column_name] = Column(column_class, primary_key=column_name in primary_keys)
 
-def create_models_from_metadata(
-    engine,
-    schema: str,
-) -> Dict[str, Type[Base]]:  # Create SQLAlchemy models from database metadata  # type: ignore
+        return type(table_name.capitalize(), (Base,), attrs)
+
+    @classmethod
+    def generate_pydantic_model(cls, db, table: str, schema: str = '') -> Type[BaseModel]:
+        """Generate Pydantic model from table metadata."""
+        query = """
+            SELECT column_name, data_type 
+            FROM information_schema.columns
+            WHERE table_name = :table
+        """
+        if schema:
+            query = query + " AND table_schema = :schema"
+        columns = db.execute(text(query), {'schema': schema, 'table': table}).fetchall()
+
+        fields = {}
+        print(f"\t\tPydantic Model")
+        for column_name, column_type in columns:
+            print(f"\t\t\tColumn: {column_name}: {column_type}")
+            _, pydantic_type = cls.SQL_TYPE_MAPPING.get(column_type, (str, str))
+            fields[column_name] = (Optional[pydantic_type], None)
+
+        return create_model(f"{table}Pydantic", **fields)
+
+class ViewModelGenerator(ModelGenerator):
+    """Generates SQLAlchemy and Pydantic models for views."""
+
+    @classmethod
+    def generate_sqlalchemy_view_model(cls, table_name: str, columns: List[PyTuple[str, str]], schema: str) -> Type[Base]:
+        """Generate SQLAlchemy model class for a view."""
+        attrs = {
+            '__tablename__': table_name,
+            '__table_args__': {'schema': schema}
+        }
+
+        primary_keys = []
+        for column_name, column_type in columns:
+            column_class, _ = cls.SQL_TYPE_MAPPING.get(column_type, str)
+            column = Column(column_class)
+            attrs[column_name] = column
+            primary_keys.append(column)
+
+        attrs['__mapper_args__'] = {'primary_key': primary_keys}
+
+        return type(table_name.capitalize(), (Base,), attrs)
+
+# Model generation functions
+def generate_models(engine: Engine, schemas: List[str]) -> Dict[str, PyTuple[Type[Base], Type[BaseModel]]]:
+    """Generate SQLAlchemy and Pydantic models for tables in specified schemas."""
+    combined_models = {}
     metadata = MetaData()
-    metadata.reflect(bind=engine, schema=schema, views=True, extend_existing=True)
-
-    models: Dict[str, Type[Base]] = {}  # * Dict to store generated models  # type: ignore
-    for table_name, table in metadata.tables.items():
-        if table.schema == schema:
-            columns = [(col.name, col.type.__class__.__name__.lower()) for col in table.columns]
-            primary_keys = [col.name for col in table.columns if col.primary_key]
-            model_class = generate_sqlalchemy_model_class(table_name.split('.')[-1], columns, primary_keys, schema)
-            models[table_name] = model_class
-            # todo: CHECK THIS LINE...
-            # print(f"Generated {'view' if is_view else 'table'} model {table_name} w/ columns {[print(f'\t{col}') for col in columns]} and primary keys {primary_keys}")
-    return models
-
-def create_pydantic_model(db: Session, table: str, model_name: str, schema: str = '') -> Type[BaseModel]:
-    query = """
-        SELECT column_name, data_type 
-        FROM information_schema.columns
-        WHERE table_name = :table
-    """
-    if schema:
-        query += " AND table_schema = :schema"
-    query = text(query)
-    columns = db.execute(query, {'schema': schema, 'table': table}).fetchall()
-
-    print(f"Pydantic model '{model_name}' for table '{table}' in schema '{schema}':")
-
-    fields: Dict[str, Tuple[Optional[Type[Any]], Any]] = {}
-    for col in columns:
-        column_name, column_type = col
-        _, pydantic_type = SQL_TYPE_MAPPING.get(column_type, (str, str))  # Default to str if type not found
-        fields[column_name] = (Optional[pydantic_type], None)  # Set field type and default value if any
-        print(f"\t\tColumn {column_name:^16} {column_type:>24} -> {pydantic_type}")  # Log field type mapping
-
-    return create_model(model_name, **fields)
-
-
-
-
-def generate_models(
-    engine: Engine,
-    schemas: List[str]
-) -> Dict[str, Tuple[Type[Base], Type[BaseModel]]]:  # type: ignore
-    all_models: Dict[str, Type[Base]] = {}  # * Dict to store all generated models  # type: ignore
-    combined_models: Dict[str, Tuple[Type[Base], Type[BaseModel]]] = {}  # * Dict to store SQLAlchemy and Pydantic models  # type: ignore
-
-    for schema in schemas:  # Generate models for each schema
-        models = create_models_from_metadata(engine, schema)
-        all_models.update(models)
-
-        for name, model in all_models.items():  # Generate Pydantic models for each SQLAlchemy model
-            pydantic_model = create_pydantic_model(next(get_db()), model.__tablename__, model.__tablename__, schema)
-            combined_models[name] = (model, pydantic_model)  # Store SQLAlchemy and Pydantic models together
-
-    return combined_models
-
-store_models: Dict[str, Tuple[Type[Base], Type[BaseModel]]] = generate_models(engine, ['store'])  # Generate models for 'store' schema  # type: ignore
-
-
-class ViewBase:
-    @declared_attr
-    def __tablename__(cls):
-        return cls.__name__.lower()
-    
-    __table_args__ = {'extend_existing': True}
-
-# * Same as 'generate_sqlalchemy_model_class' but for views
-# * but it creates tables that don't have primary keys
-def generate_sqlalchemy_view_class(
-    table_name: str,
-    columns: List[Tuple[str, str]],
-    schema: str,
-) -> Type[Base]:  # Generate SQLAlchemy view class from table metadata  # type: ignore
-    attrs = {
-        '__tablename__': table_name,
-        '__table_args__': {'schema': schema}
-    }
-
-    primary_keys = []
-
-    for column_name, column_type in columns:
-        column_class, _ = SQL_TYPE_MAPPING.get(column_type, str)
-        print(f"\tColumn {column_name:^16} {column_type:>24} -> {column_class.__name__}")
-        column_kwargs: dict[str, Any] = {}
-        column = Column(column_class, **column_kwargs)
-        attrs[column_name] = column
-        primary_keys.append(column)
-
-    # Add primary keys to mapper args to bypass the primary key requirement
-    attrs['__mapper_args__'] = {'primary_key': primary_keys}
-
-    model_class = type(table_name.capitalize(), (ViewBase, Base), attrs)
-    print(f"Generated SQLAlchemy view class for table '{table_name}' in schema '{schema}': {model_class.__dict__}")
-    return model_class
-
-def create_views_from_metadata(
-    engine,
-    schema: str,
-) -> Dict[str, Type[Base]]:  # Create SQLAlchemy view classes from database metadata  # type: ignore
-    metadata = MetaData()
-    metadata.reflect(bind=engine, schema=schema, views=True, extend_existing=True)
-
-    models: Dict[str, Type[Base]] = {}  # * Dict to store generated models  # type: ignore
-    for table_name, table in metadata.tables.items():
-        if table.schema == schema:  # get only the tables from the specified schema
-            models[table_name] = generate_sqlalchemy_view_class(
-                table_name=table_name.split('.')[-1], 
-                columns=[(col.name, col.type.__class__.__name__.lower()) for col in table.columns], 
-                schema=schema
-            )
-    return models
-
-def create_pydantic_view_class(
-        db: Session,
-        table: str,
-        model_name: str,
-        schema: str = ''
-) -> Type[BaseModel]:
-    query = """
-        SELECT column_name, data_type
-        FROM information_schema.columns
-        WHERE table_name = :table
-    """
-    if schema:
-        query += " AND table_schema = :schema"
-    query = text(query)
-    columns = db.execute(query, {'schema': schema, 'table': table}).fetchall()
-
-    print(f"Pydantic model '{model_name}' for table '{table}' in schema '{schema}':")
-
-    fields: Dict[str, Tuple[Optional[Type[Any]], Any]] = {}
-    for column_name, column_type in columns:
-        # column_name: str = column_name.replace('_', ' ').title().replace(' ', '')
-        _, pydantic_type = SQL_TYPE_MAPPING.get(column_type, (str, str))
-        fields[column_name] = (Optional[pydantic_type], None)
-        print(f"\tColumn {column_name:^16} {column_type:>24} -> {pydantic_type}")
-
-    model = create_model(model_name, **fields)
-    print(f"Pydantic model '{model_name}' for table '{table}' in schema '{schema}': {model.__fields__}")
-
-    return model
-
-
-def generate_views(
-    engine: Engine,
-    schemas: List[str]
-) -> Dict[str, Tuple[Type[Base], Type[BaseModel]]]:  # Generate SQLAlchemy and Pydantic models for views  # type: ignore
-    all_models: Dict[str, Type[Base]] = {}  # * Dict to store all generated models  # type: ignore
-    combined_models: Dict[str, Tuple[Type[Base], Type[BaseModel]]] = {}  # * Dict to store SQLAlchemy and Pydantic models  # type: ignore
 
     for schema in schemas:
-        models = create_views_from_metadata(engine, schema)
-        all_models.update(models)
+        print(f"Schema: {schema.capitalize()}")
+        metadata.reflect(bind=engine, schema=schema, extend_existing=True)
 
-        print(f"\nPydantic models '{schema}' schema:")
-        for name, model in all_models.items():
-            pydantic_model: Type[BaseModel] = create_pydantic_view_class(next(get_db()), model.__tablename__, model.__tablename__, schema)
-            combined_models[name] = (model, pydantic_model)
+        for table_name, table in metadata.tables.items():
+            if table.schema == schema:
+                table_name = table_name.split('.')[-1]
+                print(f"\tTable: {table_name}")
+                columns = [(col.name, col.type.__class__.__name__.lower()) for col in table.columns]
+                primary_keys = [col.name for col in table.columns if col.primary_key]
+                sqlalchemy_model = ModelGenerator.generate_sqlalchemy_model(table_name, columns, primary_keys, schema)
+                pydantic_model = ModelGenerator.generate_pydantic_model(engine.connect(), table_name, schema)
+                combined_models[table_name] = (sqlalchemy_model, pydantic_model)
 
     return combined_models
 
+def generate_views(engine: Engine, schemas: List[str]) -> Dict[str, PyTuple[Type[Base], Type[BaseModel]]]:
+    """Generate SQLAlchemy and Pydantic models for views in specified schemas."""
+    combined_models = {}
+    metadata = MetaData()
+    metadata.reflect(bind=engine, views=True, extend_existing=True)
 
-public_views: Dict[str, Tuple[Type[Base], Type[BaseModel]]] = generate_views(engine, ['public'])  # Generate models for 'store' schema  # type: ignore
+    for schema in schemas:
+        for table_name, table in metadata.tables.items():
+            if table.schema == schema:
+                columns = [(col.name, col.type.__class__.__name__.lower()) for col in table.columns]
+                sqlalchemy_model = ViewModelGenerator.generate_sqlalchemy_view_model(table_name, columns, schema)
+                pydantic_model = ViewModelGenerator.generate_pydantic_model(engine.connect(), table_name, schema)
+                combined_models[table_name] = (sqlalchemy_model, pydantic_model)
 
+    return combined_models
 
-all_models: Dict[str, Tuple[Type[Base], Type[BaseModel]]] = {  # Combine all models  # type: ignore
-    # **store_models,
-    # **public_models
-}
+# Initialization
+db_manager = DatabaseManager()
+store_models = generate_models(db_manager.engine, ['store'])
+# public_views = generate_views(db_manager.engine, ['public'])
+
+# Combine all models (uncomment if needed)
+# all_models = {**store_models, **public_views}

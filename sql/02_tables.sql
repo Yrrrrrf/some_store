@@ -81,37 +81,91 @@ CREATE TABLE store.purchase_details (
 -- Table: store.sale
 -- Description: Records sales made to customers
 -- -----------------------------------------------------------------------------
+-- Create the sale table without the DEFAULT clause for reference
 DROP TABLE IF EXISTS store.sale CASCADE;
 CREATE TABLE store.sale (
-    id SERIAL PRIMARY KEY,              -- Unique identifier for each sale (auto-incremented)
-    customer_id INT NOT NULL,           -- Reference to the customer who made the purchase
-    vendor_id INT NOT NULL,             -- Reference to the vendor who made the sale
-    sale_date DATE NOT NULL,            -- Date when the sale was made
-    reference VARCHAR(255) NOT NULL UNIQUE DEFAULT MD5(CONCAT(CAST(customer_id AS VARCHAR), CAST(vendor_id AS VARCHAR), CAST(sale_date AS VARCHAR))),
-    -- 'reference' is a unique hash generated from other fields, can be overridden with custom value
-    FOREIGN KEY (customer_id) REFERENCES store.customer(id),  -- Ensures data integrity with customer table
-    FOREIGN KEY (vendor_id) REFERENCES store.vendor(id)       -- Ensures data integrity with vendor table
+    id SERIAL PRIMARY KEY,
+    customer_id INT NOT NULL,
+    vendor_id INT NOT NULL,
+    sale_date DATE NOT NULL,
+    reference VARCHAR(255) NOT NULL UNIQUE,
+    FOREIGN KEY (customer_id) REFERENCES store.customer(id),
+    FOREIGN KEY (vendor_id) REFERENCES store.vendor(id)
 );
+
+-- Create a function to generate the reference
+CREATE OR REPLACE FUNCTION store.generate_sale_reference()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Generate reference only if it's not provided
+    IF NEW.reference IS NULL THEN
+        NEW.reference := MD5(CONCAT(
+            CAST(NEW.customer_id AS VARCHAR),
+            CAST(NEW.vendor_id AS VARCHAR),
+            CAST(NEW.sale_date AS VARCHAR),
+            CAST(EXTRACT(EPOCH FROM NOW()) AS VARCHAR) -- Add current timestamp for uniqueness
+        ));
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create a trigger to automatically generate the reference before insert
+CREATE TRIGGER tr_generate_sale_reference
+BEFORE INSERT ON store.sale
+FOR EACH ROW
+EXECUTE FUNCTION store.generate_sale_reference();
 
 -- -----------------------------------------------------------------------------
 -- Table: store.sale_details
 -- Description: Stores details of products included in each sale
 -- -----------------------------------------------------------------------------
+-- Drop existing table if it exists
 DROP TABLE IF EXISTS store.sale_details CASCADE;
+
+-- Create the sale_details table
 CREATE TABLE store.sale_details (
-    id SERIAL PRIMARY KEY,              -- Unique identifier for each sale detail (auto-incremented)
-    sale_id INT NOT NULL,               -- Reference to the associated sale
-    product_id INT NOT NULL,            -- Reference to the product sold
-    quantity INT NOT NULL,              -- Number of units sold
-    unit_price DECIMAL(10, 2) NOT NULL, -- Price per unit at the time of sale
-    FOREIGN KEY (sale_id) REFERENCES store.sale(id),      -- Ensures data integrity with sale table
-    FOREIGN KEY (product_id) REFERENCES store.product(id) -- Ensures data integrity with product table
+    id SERIAL PRIMARY KEY,
+    sale_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (sale_id) REFERENCES store.sale(id),
+    FOREIGN KEY (product_id) REFERENCES store.product(id)
 );
 
+-- Add constraint to ensure positive quantity
 ALTER TABLE store.sale_details ADD CONSTRAINT check_positive_quantity CHECK (quantity > 0);
 
+-- Create a function to automatically set the unit price
+CREATE OR REPLACE FUNCTION store.set_sale_detail_unit_price()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Fetch the current unit price from the product table
+    SELECT unit_price INTO NEW.unit_price
+    FROM store.product
+    WHERE id = NEW.product_id;
 
+    -- If the product doesn't exist or has no price, raise an exception
+    IF NEW.unit_price IS NULL THEN
+        RAISE EXCEPTION 'No valid price found for product with ID %', NEW.product_id;
+    END IF;
 
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create a trigger to automatically set the unit price before insert
+CREATE TRIGGER tr_set_sale_detail_unit_price
+BEFORE INSERT ON store.sale_details
+FOR EACH ROW
+EXECUTE FUNCTION store.set_sale_detail_unit_price();
+
+-- Example usage (assuming product with ID 1 exists and has a price):
+-- INSERT INTO store.sale_details (sale_id, product_id, quantity) VALUES (1, 1, 5);
+
+-- To check the result:
+-- SELECT * FROM store.sale_details;
 
 -- -----------------------------------------------------------------------------
 -- Ideas for Future Database Improvements:
