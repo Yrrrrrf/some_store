@@ -134,3 +134,109 @@ export const fetchTableRows = (apiUrl: string, table: string, formData: any, set
     fetchRows(apiUrl, table, formData, setData, false);
 export const fetchViewRows = (apiUrl: string, view: string, formData: any, setData: (data: any[]) => void) =>
     fetchRows(apiUrl, view, formData, setData, true);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Creates a new record in a table.
+ * @param apiUrl - The base API URL.
+ * @param tableName - The name of the table.
+ * @param data - The data to create the new record.
+ * @returns A promise that resolves with the created record data.
+ */
+export async function createRecord(
+    apiUrl: string,
+    tableName: string,
+    data: Record<string, any>
+): Promise<any> {
+    const url = `${apiUrl}/${tableName.replace(/ /g, '_').toLowerCase()}`;
+    try {
+        const response = await apiRequest(url, {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+        console.log(`Successfully created record in ${tableName}:`, response);
+        return response;
+    } catch (error) {
+        console.error(`Failed to create record in ${tableName}:`, error);
+        throw error;
+    }
+}
+
+
+
+
+
+
+
+/**
+ * Deletes a record from a table.
+ * @param apiUrl - The base API URL.
+ * @param tableName - The name of the table.
+ * @param field - The field to use for identifying the record (usually 'id').
+ * @param value - The value of the field to identify the record to delete.
+ * @returns A promise that resolves when the delete operation is complete.
+ */
+export async function deleteRecord(
+    apiUrl: string,
+    tableName: string,
+    field: string,
+    value: string | number
+): Promise<void> {
+    const url = `${apiUrl}/${tableName.replace(/ /g, '_').toLowerCase()}/${field}=${value}`;
+    try {
+        await apiRequest(url, { method: 'DELETE' });
+        console.log(`Successfully deleted record from ${tableName} where ${field} = ${value}`);
+    } catch (error) {
+        console.error(`Failed to delete record from ${tableName}:`, error);
+        throw error;
+    }
+}
+
+/**
+ * Updates an existing record in a table.
+ * @param apiUrl - The base API URL.
+ * @param tableName - The name of the table.
+ * @param field - The field to use for identifying the record (usually 'id').
+ * @param value - The value of the field to identify the record to update.
+ * @param data - The updated data for the record.
+ * @returns A promise that resolves with the updated record data.
+ */
+export async function updateRecord(
+    apiUrl: string,
+    tableName: string,
+    field: string,
+    value: string | number,
+    data: Record<string, any>
+): Promise<any> {
+    const url = `${apiUrl}/${tableName.replace(/ /g, '_').toLowerCase()}/${field}=${value}`;
+    try {
+        const response = await apiRequest(url, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+        console.log(`Successfully updated record in ${tableName} where ${field} = ${value}:`, response);
+        return response;
+    } catch (error) {
+        console.error(`Failed to update record in ${tableName}:`, error);
+        throw error;
+    }
+}

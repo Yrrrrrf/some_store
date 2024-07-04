@@ -50,7 +50,14 @@ CREATE TABLE store.sale (  -- Sale of products (to customers)
     customer_id INT NOT NULL,  -- Customer that bought the products
     vendor_id INT NOT NULL,  -- Vendor that sold the products
     sale_date DATE NOT NULL,  -- Date of the sale
-    total_amount DECIMAL(10, 2) NOT NULL,  -- Total amount of the sale
+
+    -- * Add a new 'reference' column on this store.sale table that is some kind of 'hash' of the sale details
+    -- * This hash must be created from the other fields of this same table
+    -- * The 'hash' must be unique for each sale and has a default value created from the other fields
+    -- * The 'hash' must be a VARCHAR(255) and cannot be NULL and the user can also provide a custom value
+    -- * The 'hash' must be created using the following formula:
+        -- *   hash = MD5(CONCAT(customer_id, vendor_id, sale_date)) or something similar
+
     FOREIGN KEY (customer_id) REFERENCES store.customer(id),  -- Reference to the customer
     FOREIGN KEY (vendor_id) REFERENCES store.vendor(id)  -- Reference to the vendor
 );

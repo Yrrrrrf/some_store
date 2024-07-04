@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { fetchColumns, fetchTableRows } from '../../utils';
+    import { fetchColumns, fetchTableRows, createRecord, updateRecord } from '../../utils';
     import TableForm from './TableForm.svelte';
     import TableData from './TableData.svelte';
 
@@ -28,12 +28,23 @@
         isLoading = false;
     }
 
-    function handleFormSubmit(event: CustomEvent) {
-        console.log('Form submitted:', event.detail);
-        // TODO: Implement API call to create or update record
-        showForm = false;
-        editingItem = null;
-        loadTableData();
+    async function handleFormSubmit(event: CustomEvent) {
+        const formData = event.detail;
+        try {
+            if (editingItem) {
+                // Update existing record
+                await updateRecord(apiUrl, tableName, 'id', editingItem.id, formData);
+            } else {
+                // Create new record
+                await createRecord(apiUrl, tableName, formData);
+            }
+            showForm = false;
+            editingItem = null;
+            await loadTableData(); // Refresh the table data
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            // Handle the error (e.g., show an error message to the user)
+        }
     }
 
     function handleEdit(item: any) {
@@ -41,10 +52,8 @@
         showForm = true;
     }
 
-    function handleDelete(item: any) {
-        // TODO: Implement delete functionality
-        console.log('Delete item:', item);
-        loadTableData();
+    async function handleDelete(item: any) {
+        // Implementation for delete (you can keep your existing delete logic here)
     }
 </script>
 
@@ -59,7 +68,12 @@
         </button>
 
         {#if showForm}
-            <TableForm {tableName} {editingItem} on:submit={handleFormSubmit} />
+            <TableForm
+                    {tableName}
+                    {editingItem}
+                    on:submit={handleFormSubmit}
+                    on:cancel={() => { showForm = false; editingItem = null; }}
+            />
         {/if}
 
         <TableData {columns} data={tableData} on:edit={handleEdit} on:delete={handleDelete} />

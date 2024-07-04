@@ -11,6 +11,10 @@ from src.api.database import *
 # todo: They're probably the same, so I should merge them into one method
 # todo: fn schema_dr_routes -> (...)
 
+# todo: remove the `schema_dt_routes` & create a unique crud_routes method
+# this new method should add all the routes for the CRUD operations & the get_columns route for each table
+
+
 # * Add `get_tables` to the router & `get_columns` for each table
 def schema_dt_routes(
     db_dependency: Callable,
@@ -29,6 +33,8 @@ def schema_dt_routes(
     """
     @router.get("/tables", response_model=List[str], tags=["Tables"])
     def get_tables(): return [model[0].__tablename__ for model in models.values()]
+
+
 
     def get_columns_route(model: Type[Base]):  # type: ignore
         @router.get(f"/{model.__tablename__}/columns", response_model=List[str], tags=[model.__tablename__.capitalize()])
