@@ -1,140 +1,153 @@
--- Sales by Invoice
-DROP VIEW IF EXISTS sales_by_invoice;
-CREATE VIEW sales_by_invoice AS
-SELECT s.id AS folio_venta, c.name AS nombre_cliente, s.sale_date AS fecha_venta, s.total_amount AS importe_total
-FROM store.sale s
-JOIN store.customer c ON s.customer_id = c.id;
+-- File: 04_views.sql
+-- Description: This file contains SQL views for generating various reports
+--              in the store database. These views are designed to provide
+--              quick access to commonly needed sales and inventory data.
 
--- Sales by Product
-DROP VIEW IF EXISTS sales_by_product;
-CREATE VIEW sales_by_product AS
-SELECT p.id AS cod_art, p.description AS nom_articulo, SUM(sd.quantity) AS cantidad_total_vend, SUM(sd.quantity * sd.unit_price) AS importe_total_vend
-FROM store.sale_details sd
-JOIN store.product p ON sd.product_id = p.id
-GROUP BY p.id, p.description;
-
--- Sales by Customer
-DROP VIEW IF EXISTS sales_by_customer;
-CREATE VIEW sales_by_customer AS
-SELECT c.id AS id_cliente, c.name AS nom_cliente, SUM(s.total_amount) AS importe_total_vendido
-FROM store.sale s
-JOIN store.customer c ON s.customer_id = c.id
-GROUP BY c.id, c.name;
-
--- Sales by Month
-DROP VIEW IF EXISTS sales_by_month;
-CREATE VIEW sales_by_month AS
-SELECT TO_CHAR(s.sale_date, 'YYYY-MM') AS mes, SUM(s.total_amount) AS importe_total_vendido
-FROM store.sale s
-GROUP BY TO_CHAR(s.sale_date, 'YYYY-MM');
-
--- Sales by Month by Customer
-DROP VIEW IF EXISTS sales_by_month_by_customer;
-CREATE VIEW sales_by_month_by_customer AS
-SELECT TO_CHAR(s.sale_date, 'YYYY-MM') AS mes, c.name AS nom_cliente, SUM(s.total_amount) AS importe_total_vendido
-FROM store.sale s
-JOIN store.customer c ON s.customer_id = c.id
-GROUP BY TO_CHAR(s.sale_date, 'YYYY-MM'), c.name;
-
--- Inventory of Products
-DROP VIEW IF EXISTS product_inventory;
-CREATE VIEW product_inventory AS
-SELECT p.id AS cod_art, p.description AS nom_articulo, p.unit_price AS precio_unitario
-FROM store.product p;
-
--- Top Selling Products
-DROP VIEW IF EXISTS top_selling_products;
-CREATE VIEW top_selling_products AS
-SELECT p.id AS cod_art, p.description AS nom_articulo, SUM(sd.quantity) AS cantidad_total_vend
-FROM store.sale_details sd
-JOIN store.product p ON sd.product_id = p.id
-GROUP BY p.id, p.description
-ORDER BY SUM(sd.quantity) DESC
-LIMIT 10;
-
--- Revenue by Vendor
-DROP VIEW IF EXISTS revenue_by_vendor;
-CREATE VIEW revenue_by_vendor AS
-SELECT v.id AS vendor_id, v.name AS vendor_name, SUM(s.total_amount) AS total_revenue
-FROM store.sale s
-JOIN store.vendor v ON s.vendor_id = v.id
-GROUP BY v.id, v.name;
-
--- Purchases by Provider
-DROP VIEW IF EXISTS purchases_by_provider;
-CREATE VIEW purchases_by_provider AS
-SELECT pr.id AS provider_id, pr.name AS provider_name, SUM(p.total_amount) AS total_spent
-FROM store.purchase p
-JOIN store.provider pr ON p.provider_id = pr.id
-GROUP BY pr.id, pr.name;
-
--- Monthly Revenue
-DROP VIEW IF EXISTS monthly_revenue;
-CREATE VIEW monthly_revenue AS
-SELECT TO_CHAR(s.sale_date, 'YYYY-MM') AS month, SUM(s.total_amount) AS total_revenue
-FROM store.sale s
-GROUP BY TO_CHAR(s.sale_date, 'YYYY-MM')
-ORDER BY month;
-
--- Reporte de ventas (id_venta, fecha_venta, cliente, importe_total) con filtrado por fecha de inicio y fecha fin
+-- -----------------------------------------------------------------------------
+-- View: report_sales
+-- Description: Provides a detailed view of individual sales transactions
+-- Usage: Use this view to get an overview of all sales or filter by date range
+-- -----------------------------------------------------------------------------
 DROP VIEW IF EXISTS report_sales;
 CREATE VIEW report_sales AS
-SELECT s.id AS id_venta, s.sale_date AS fecha_venta, c.name AS cliente, s.total_amount AS importe_total
-FROM store.sale s
-JOIN store.customer c ON s.customer_id = c.id;
+SELECT
+    s.id AS id_venta,
+    s.sale_date AS fecha_venta,
+    c.name AS cliente,
+    s.total_amount AS importe_total
+FROM
+    store.sale s
+JOIN
+    store.customer c ON s.customer_id = c.id;
 
--- Reporte de venta por cliente (id_cliente, nom_cliente, importe total)
+-- Comment: This view joins the sale and customer tables to provide
+-- a comprehensive view of each sale, including the customer name.
+-- It can be filtered by date range in queries to generate time-specific reports.
+
+-- -----------------------------------------------------------------------------
+-- View: report_sales_by_customer
+-- Description: Aggregates total sales by customer
+-- Usage: Use this view to analyze customer purchasing patterns and identify top customers
+-- -----------------------------------------------------------------------------
 DROP VIEW IF EXISTS report_sales_by_customer;
 CREATE VIEW report_sales_by_customer AS
-SELECT c.id AS id_cliente, c.name AS nombre_cliente, SUM(s.total_amount) AS importe_total_vendido
-FROM store.sale s
-JOIN store.customer c ON s.customer_id = c.id
-GROUP BY c.id, c.name;
+SELECT
+    c.id AS id_cliente,
+    c.name AS nombre_cliente,
+    SUM(s.total_amount) AS importe_total_vendido
+FROM
+    store.sale s
+JOIN
+    store.customer c ON s.customer_id = c.id
+GROUP BY
+    c.id, c.name;
 
--- Reporte de venta por articulo (id_articulo, nom_articulo, cantidad vendida, importe total)
+-- Comment: This view calculates the total sales amount for each customer.
+-- It's useful for customer segmentation and identifying high-value customers.
+
+-- -----------------------------------------------------------------------------
+-- View: report_sales_by_product
+-- Description: Provides sales data aggregated by product
+-- Usage: Use this view to analyze product performance and identify best-selling items
+-- -----------------------------------------------------------------------------
 DROP VIEW IF EXISTS report_sales_by_product;
 CREATE VIEW report_sales_by_product AS
-SELECT p.id AS id_articulo, p.description AS nombre_articulo, SUM(sd.quantity) AS cantidad_vendida, SUM(sd.quantity * sd.unit_price) AS importe_total_vendido
-FROM store.sale_details sd
-JOIN store.product p ON sd.product_id = p.id
-GROUP BY p.id, p.description;
+SELECT
+    p.id AS id_articulo,
+    p.description AS nombre_articulo,
+    SUM(sd.quantity) AS cantidad_vendida,
+    SUM(sd.quantity * sd.unit_price) AS importe_total_vendido
+FROM
+    store.sale_details sd
+JOIN
+    store.product p ON sd.product_id = p.id
+GROUP BY
+    p.id, p.description;
 
--- Reporte de ventas por mes (mes, importe total de ventas)
+-- Comment: This view aggregates sales data for each product, showing both
+-- the quantity sold and the total revenue generated. It's essential for
+-- inventory management and identifying popular products.
+
+-- -----------------------------------------------------------------------------
+-- View: report_sales_by_month
+-- Description: Aggregates monthly sales data
+-- Usage: Use this view for trend analysis and month-over-month comparisons
+-- -----------------------------------------------------------------------------
 DROP VIEW IF EXISTS report_sales_by_month;
 CREATE VIEW report_sales_by_month AS
-SELECT TO_CHAR(s.sale_date, 'YYYY-MM') AS mes, SUM(s.total_amount) AS importe_total_vendido
-FROM store.sale s
-GROUP BY TO_CHAR(s.sale_date, 'YYYY-MM');
+SELECT
+    TO_CHAR(s.sale_date, 'YYYY-MM') AS mes,
+    SUM(s.total_amount) AS importe_total_vendido
+FROM
+    store.sale s
+GROUP BY
+    TO_CHAR(s.sale_date, 'YYYY-MM');
 
--- Reporte de ventas por mes por articulo (mes, articulo, cantidad_vendida, importe total ventas)
+-- Comment: This view provides a monthly breakdown of total sales.
+-- It's useful for tracking seasonal trends and overall business performance.
+
+-- -----------------------------------------------------------------------------
+-- View: report_sales_by_month_by_product
+-- Description: Detailed monthly sales data broken down by product
+-- Usage: Use this view for in-depth analysis of product performance over time
+-- -----------------------------------------------------------------------------
 DROP VIEW IF EXISTS report_sales_by_month_by_product;
 CREATE VIEW report_sales_by_month_by_product AS
-SELECT TO_CHAR(s.sale_date, 'YYYY-MM') AS mes, p.description AS nombre_articulo, SUM(sd.quantity) AS cantidad_vendida, SUM(sd.quantity * sd.unit_price) AS importe_total_vendido
-FROM store.sale_details sd
-JOIN store.sale s ON sd.sale_id = s.id
-JOIN store.product p ON sd.product_id = p.id
-GROUP BY TO_CHAR(s.sale_date, 'YYYY-MM'), p.description;
+SELECT
+    TO_CHAR(s.sale_date, 'YYYY-MM') AS mes,
+    p.description AS nombre_articulo,
+    SUM(sd.quantity) AS cantidad_vendida,
+    SUM(sd.quantity * sd.unit_price) AS importe_total_vendido
+FROM
+    store.sale_details sd
+JOIN
+    store.sale s ON sd.sale_id = s.id
+JOIN
+    store.product p ON sd.product_id = p.id
+GROUP BY
+    TO_CHAR(s.sale_date, 'YYYY-MM'), p.description;
 
--- Reporte de existencias (id_articulo, nombre_articulo, existencias)
+-- Comment: This view combines monthly aggregation with product-specific data.
+-- It's particularly useful for identifying seasonal product trends and
+-- analyzing the performance of specific products over time.
+
+-- -----------------------------------------------------------------------------
+-- View: report_product_inventory
+-- Description: Current inventory status for all products
+-- Usage: Use this view for quick inventory checks and pricing information
+-- -----------------------------------------------------------------------------
 DROP VIEW IF EXISTS report_product_inventory;
 CREATE VIEW report_product_inventory AS
-SELECT p.id AS id_articulo, p.description AS nombre_articulo, p.unit_price AS precio_unitario
-FROM store.product p;
+SELECT
+    p.id AS id_articulo,
+    p.description AS nombre_articulo,
+    p.unit_price AS precio_unitario
+FROM
+    store.product p;
 
--- Testing the report views
-SELECT * FROM report_sales;
-SELECT * FROM report_sales_by_customer;
-SELECT * FROM report_sales_by_product;
-SELECT * FROM report_sales_by_month;
-SELECT * FROM report_sales_by_month_by_product;
-SELECT * FROM report_product_inventory;
+-- Comment: This view provides a snapshot of the current product inventory.
+-- It's useful for quick price checks and basic inventory management.
+-- Note: This view doesn't include the actual inventory count. Consider
+-- adding an 'inventory' column to the product table if needed.
 
--- Select all the views in the database
+-- -----------------------------------------------------------------------------
+-- Testing and Metadata Queries
+-- -----------------------------------------------------------------------------
+
+-- Test queries for each report view
+SELECT * FROM report_sales LIMIT 5;
+SELECT * FROM report_sales_by_customer LIMIT 5;
+SELECT * FROM report_sales_by_product LIMIT 5;
+SELECT * FROM report_sales_by_month LIMIT 5;
+SELECT * FROM report_sales_by_month_by_product LIMIT 5;
+SELECT * FROM report_product_inventory LIMIT 5;
+
+-- Query to list all views in the 'store' schema
 SELECT table_name
 FROM information_schema.views
-WHERE table_schema = 'store';
+WHERE table_schema = 'store' AND table_name LIKE 'report_%';
 
--- Select all the views in the database with their respective metadata information
+-- Query to show the definition of each report view
 SELECT table_name, view_definition
 FROM information_schema.views
-WHERE table_schema = 'store';
+WHERE table_schema = 'store' AND table_name LIKE 'report_%';

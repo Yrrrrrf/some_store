@@ -1,11 +1,19 @@
 <h1 align="center">
-    <img src="./assets/icons/carts.png" alt="Some Store Icon" width="128">
-    <div align="center">Some Store</div>
+   <img src="./assets/icons/carts.png" alt="Some Store Icon" width="128">
+   <div align="center">Some Store</div>
 </h1>
 
-[<img alt="github" src="https://img.shields.io/badge/github-Yrrrrrf%2Fsome__store-58A6FF?style=for-the-badge&logo=github" height="24">](https://github.com/Yrrrrrf/some_store)
+<p align="center">
+    <a href="https://github.com/Yrrrrrf/some_store">
+        <img alt="github" src="https://img.shields.io/badge/github-Yrrrrrf%2Fsome__store-58A6FF?style=for-the-badge&logo=github" height="24">
+    </a>
+    <img alt="license" src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" height="24">
+    <img alt="version" src="https://img.shields.io/badge/version-0.1.0-blue?style=for-the-badge" height="24">
+</p>
 
-Manage the operations of a `generic store` through a comprehensive database and a robust API.
+<p align="center">
+Manage the operations of a <strong>generic store</strong> through a comprehensive database and a robust API.
+</p>
 
 The database consists of various tables and views that store critical information related to sales, products, customers, and inventory management.
 
@@ -81,6 +89,23 @@ cd hub  # change to the frontend directory (svelte app)
 npm run dev  # run the frontend application
 ```
 - Access the frontend application at [port 5173](http://localhost:5173/)
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0;">
+    <div style="flex: 1; margin-right: 10px;">
+        <img src="./assets/static/data_view.png" alt="Data View" style="width: 100%; max-width: 400px;">
+    </div>
+    <div style="flex: 1; margin-left: 10px;">
+        <img src="./assets/static/data_management.png" alt="Data Management" style="width: 100%; max-width: 400px;">
+    </div>
+</div>
+
+## 📘 Documentation
+
+For detailed information about the API endpoints and database schema, please refer to the [API Documentation](http://127.0.0.1:8000/docs) when the server is running.
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/Yrrrrrf/some_store/issues).
 
 ## [License](./LICENSE)
 

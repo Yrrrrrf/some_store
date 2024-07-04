@@ -11,3 +11,5 @@ All the icons used in this project are from [flaticon.com](https://www.flaticon.
 | Description | Icon |
 | ---- | ---- |
 | [ERD](./static/db_erd.png) | <img src="./static/db_erd.png" width="1024"> |
+| [Data View](./static/data_view.png) | <img src="./static/data_view.png" width="1024"> |
+| [Data Management](./static/data_management.png) | <img src="./static/data_management.png" width="1024"> |

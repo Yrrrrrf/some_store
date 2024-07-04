@@ -69,10 +69,10 @@
 
         {#if showForm}
             <TableForm
-                    {tableName}
-                    {editingItem}
-                    on:submit={handleFormSubmit}
-                    on:cancel={() => { showForm = false; editingItem = null; }}
+                {tableName}
+                {editingItem}
+                on:submit={handleFormSubmit}
+                on:cancel={() => { showForm = false; editingItem = null; }}
             />
         {/if}
 

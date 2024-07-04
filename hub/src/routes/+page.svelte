@@ -10,4 +10,11 @@
 			Go to Dashboard <LayoutDashboard class="ml-2" />
 		</button>
 	</div>
+
+	<div class="space-y-5 mt-4" in:fly="{{ y: 20, duration: 500 }}">
+		<button class="btn variant-filled-primary text-lg px-6 py-3 flex items-center" on:click={() => goto('/manage')}>
+			Go to Manage <ChevronsLeft class="ml-2" />
+		</button>
+	</div>
+
 </div>
