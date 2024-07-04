@@ -1,4 +1,5 @@
 from fastapi import Depends, HTTPException, APIRouter
+from fastapi.params import Query
 from sqlalchemy.orm import Session
 from sqlalchemy import Integer
 from pydantic import BaseModel
@@ -100,6 +101,7 @@ def schema_view_routes(
     for _, (sqlalchemy_model, pydantic_model) in models.items():
         generate_get_all_route(sqlalchemy_model, pydantic_model, db_dependency)
 
+
 # * CRUD Operations Routes (GET, POST, PUT, DELETE)
 def crud_routes(
     sqlalchemy_model: Type[Base],  # type: ignore
@@ -110,74 +112,82 @@ def crud_routes(
 ):
     # * POST (Create)
     @router.post(f"/{sqlalchemy_model.__tablename__.lower()}", tags=[sqlalchemy_model.__name__], response_model=pydantic_model)
-    def create_resource(resource: pydantic_model, db: Session = Depends(db_dependency)):
-        db_resource: Base = sqlalchemy_model(resource.model_dump())  # type: ignore
+    def create_resource(
+        resource: pydantic_model, 
+        db: Session = Depends(db_dependency)
+    ) -> Base:  # type: ignore
+        db_resource: Base = sqlalchemy_model(**resource.model_dump())
         db.add(db_resource)
+
         try:
             db.commit()
             db.refresh(db_resource)
         except Exception as e:
             db.rollback()
-            raise e
+            raise HTTPException(status_code=400, detail=str(e))
+
         return db_resource
 
-    def _create_route(attribute: str, attribute_type: Any, route_type: str):
-        match route_type:
-            case "GET":
-                @router.get(f"/{sqlalchemy_model.__tablename__.lower()}/{attribute}={{value}}", tags=[sqlalchemy_model.__name__], response_model=List[pydantic_model])
-                def get_resource(value: attribute_type, db: Session = Depends(db_dependency)):  # type: ignore
-                    result = db.query(sqlalchemy_model).filter(getattr(sqlalchemy_model, attribute) == value).all()
-                    if not result:
-                        raise HTTPException(status_code=404, detail=f"No {sqlalchemy_model.__name__} with {attribute} '{value}' found.")
-                    return result
+    # * DELETE (Delete) (with query parameters)
+    @router.delete(f"/{sqlalchemy_model.__tablename__.lower()}", tags=[sqlalchemy_model.__name__])
+    def delete_resource(
+        db: Session = Depends(db_dependency),
+        filters: pydantic_model = Depends()
+    ) -> None:
+        query = db.query(sqlalchemy_model)
+        filters_dict: Dict[str, Any] = filters.model_dump()
 
-            case "PUT":
-                @router.put(f"/{sqlalchemy_model.__tablename__.lower()}/{attribute}={{value}}", tags=[sqlalchemy_model.__name__], response_model=pydantic_model)
-                def update_resource(value: attribute_type, resource: pydantic_model, db: Session = Depends(db_dependency)):  # type: ignore
-                    db_resource = db.query(sqlalchemy_model).filter(getattr(sqlalchemy_model, attribute) == value).first()
-                    if not db_resource:
-                        raise HTTPException(status_code=404, detail=f"No {sqlalchemy_model.__name__} with {attribute} '{value}' found.")
+        if any(value is not None for value in filters_dict.values()):
+            for attr, value in filters_dict.items():
+                if value is not None:
+                    query = query.filter(getattr(sqlalchemy_model, attr) == value)
 
-                    for key, value in resource.dict(exclude_unset=True).items():
-                        setattr(db_resource, key, value)
+            deleted_resources = query.all()
+            try:
+                query.delete()
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                raise HTTPException(status_code=400, detail=str(e))
+            
+            return {
+                "deleted_resources": len(deleted_resources),
+                "resources": deleted_resources
+            }
 
-                    try:
-                        db.commit()
-                        db.refresh(db_resource)
-                    except Exception as e:
-                        db.rollback()
-                        raise e
+        else:
+            raise HTTPException(status_code=400, detail="No filters provided.")
 
-                    return db_resource
+    # * PUT (Update) (with query parameters)
+    @router.put(f"/{sqlalchemy_model.__tablename__.lower()}", tags=[sqlalchemy_model.__name__], response_model=List[pydantic_model])
+    def update_resource(
+        resource: pydantic_model,
+        db: Session = Depends(db_dependency),
+        filters: pydantic_model = Depends()
+    ):
+        query = db.query(sqlalchemy_model)
+        filters_dict: Dict[str, Any] = filters.model_dump(exclude_unset=True)
 
-            case "DELETE":
-                @router.delete(f"/{sqlalchemy_model.__tablename__.lower()}/{attribute}={{value}}", tags=[sqlalchemy_model.__name__])
-                def delete_resource(value: attribute_type, db: Session = Depends(db_dependency)):  # type: ignore
-                    db_resource = db.query(sqlalchemy_model).filter(getattr(sqlalchemy_model, attribute) == value).first()
-                    if not db_resource:
-                        raise HTTPException(status_code=404, detail=f"No {sqlalchemy_model.__name__} with {attribute} '{value}' found.")
+        if not filters_dict:
+            raise HTTPException(status_code=400, detail="No filters provided.")
 
-                    try:
-                        db.delete(db_resource)
-                        db.commit()
-                    except Exception as e:
-                        db.rollback()
-                        raise e
+        # * Filter by the provided filters
+        for attr, value in filters_dict.items():
+            if value is not None:
+                query = query.filter(getattr(sqlalchemy_model, attr) == value)
 
-                    return {
-                        "message": f"Successfully deleted {sqlalchemy_model.__name__} with {attribute} '{value}'",
-                        "resource": db_resource
-                    }
+        updated_resources = query.all()
 
-            case _: raise ValueError(f"Invalid route type: {route_type}")
+        # * Update the resource with the provided data
+        update_data = resource.model_dump(exclude_unset=True)
+        if 'id' in update_data: del update_data['id']  # Remove id from update data
 
-    included_attributes = [(attr, col.type.__class__)
-        for attr, col in sqlalchemy_model.__table__.columns.items()
-        if attr not in excluded_attributes
-    ]
+        try:
+            query.update(update_data)
+            db.commit()
 
-    for attr, attr_type in included_attributes:
-        # todo: Check if th attr_type declaration is really necessary...
-        # ^ I mean, it is to avoid the error of the type not being a type
-        # ^ But I think can be redundant to the type of the attribute...
-        [_create_route(attr, int if attr_type == Integer else str, method) for method in ["GET", "PUT", "DELETE"]]
+            return updated_resources
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(status_code=400, detail=str(e))
+    
