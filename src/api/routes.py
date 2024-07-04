@@ -70,17 +70,22 @@ def define_routes() -> Tuple[APIRouter, APIRouter, APIRouter, APIRouter]:
     - Delete a resource by ID
     """
 
-    print(f"\n\033[0;30;47m{Config.NAME.value}\033[m\n")  # white bg
     return home, basic_dt, crud_attr, views  # * return all the routers...
+
 
 home, basic_dt, views, crud_attr = define_routes()
 
-# * Add all the routes for the home page
-# schema_dt_routes(get_db, basic_dt, store_models)  # * schema routes for each table
-# schema_view_routes(get_db, views, public_views)  # * schema routes for each view
+dt_routes(basic_dt, store_models, type="tables")  # * list all the tables in the database
+dt_routes(basic_dt, store_views, type="views")  # * list all the tables in the database
 
-list_tables(home, store_models, 'store')  # * list all the tables in the database
-
-# * Add all the CRUD routes for each view
+# * Add all the CRUD routes for each model
+    # * Create: POST /{model_name} (take the model as a parameter)
+    # * Read: GET /{model_name} (get all w/ query params)
+    # * Update: PUT /{model_name} (modify all w/ query params) (take the model as a parameter)
+    # * Delete: DELETE /{model_name} (delete all w/ query params)
 for sqlalchemy_model, pydantic_model in store_models.values():
     crud_routes(sqlalchemy_model, pydantic_model, crud_attr, db_manager.get_db)
+
+# * Add 'get_resources' route for each view (w/ query params)
+for sqlalchemy_model, pydantic_model in store_views.values():
+    view_routes(sqlalchemy_model, pydantic_model, views, db_manager.get_db)

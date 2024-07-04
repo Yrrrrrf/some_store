@@ -5,10 +5,11 @@ from pydantic import BaseModel
 from typing import List, Dict, Tuple, Type, Callable, Any
 from src.api.database import Base
 
-def list_tables(
+def dt_routes(
     router: APIRouter, 
     models: Dict[str, Tuple[Type[Base], Type[BaseModel]]],
-    schema: str = None,
+    type: str = "tables",
+    url_prefix: str = None,
     excluded_tables: List[str] = []
 ):
     """
@@ -19,7 +20,7 @@ def list_tables(
         models (Dict[str, Tuple[Type[Base], Type[BaseModel]]]): Dictionary of models.
     """
     @router.get(
-        "/tables" if not schema else f"/{schema}/tables", 
+        f"/{type}" if not url_prefix else f"/{url_prefix}/{type}", 
         response_model=List[str], 
         tags=["Metadata"]
     )
@@ -28,45 +29,6 @@ def list_tables(
         # return [model[0].__tablename__ for model in models.values() if model[0].__tablename__ not in excluded_tables]
         return [model[0].__tablename__ for model in models.values()]
 
-def schema_view_routes(
-    db_dependency: Callable,
-    router: APIRouter,
-    models: Dict[str, Tuple[Type[Base], Type[BaseModel]]]
-):
-    """
-    Add routes for database views.
-
-    Args:
-        db_dependency (Callable): Database session dependency.
-        router (APIRouter): The FastAPI router to add routes to.
-        models (Dict[str, Tuple[Type[Base], Type[BaseModel]]]): Dictionary of view models.
-    """
-    @router.get("/views", response_model=List[str], tags=["Metadata"])
-    def get_views() -> List[str]:
-        """List all views in the database."""
-        return [model[0].__tablename__ for model in models.values()]
-
-    for model_name, (sqlalchemy_model, pydantic_model) in models.items():
-        @router.get(f"/view/{model_name}/columns", response_model=List[str], tags=["Views"])
-        def get_columns(model=sqlalchemy_model) -> List[str]:
-            """Get columns for a specific view."""
-            return [c.name for c in model.__table__.columns]
-
-        @router.get(f"/view/{model_name}", response_model=List[pydantic_model], tags=["Views"])
-        def get_all(
-            filters: pydantic_model = Depends(),
-            db: Session = Depends(db_dependency),
-            model=sqlalchemy_model
-        ):
-            """Get all records for a specific view with optional filtering."""
-            query = db.query(model)
-            filters_dict: Dict[str, Any] = filters.model_dump(exclude_unset=True)
-
-            if filters_dict:
-                query = query.filter(*[getattr(model, attr) == value for attr, value in filters_dict.items()])
-
-            results = query.all()
-            return results
 
 def crud_routes(
     sqlalchemy_model: Type[Base],
@@ -164,3 +126,40 @@ def crud_routes(
         except Exception as e:
             db.rollback()
             raise HTTPException(status_code=400, detail=str(e))
+
+
+def view_routes(
+    sqlalchemy_model: Type[Base],
+    pydantic_model: Type[BaseModel],
+    router: APIRouter,
+    db_dependency: Callable,
+    excluded_attributes: List[str] = ["id", "created_at", "password", "additional_info"]
+):
+    """
+    Add routes for a specific view.
+
+    Args:
+        sqlalchemy_model (Type[Base]): SQLAlchemy model.
+        pydantic_model (Type[BaseModel]): Pydantic model.
+        router (APIRouter): The FastAPI router to add routes to.
+        db_dependency (Callable): Database session dependency.
+        excluded_attributes (List[str]): Attributes to exclude from operations.
+    """
+    model_name: str = sqlalchemy_model.__tablename__.lower()
+
+    @router.get(f"/view/{model_name}/columns", response_model=List[str], tags=["Views"])
+    def get_columns() -> List[str]:
+        """Get columns for the model."""
+        return [c.name for c in sqlalchemy_model.__table__.columns]
+
+    @router.get(f"/view/{model_name}", tags=["Views"], response_model=List[pydantic_model])
+    def get_resources(db: Session = Depends(db_dependency), filters: pydantic_model = Depends()):
+        """Get resources with optional filtering."""
+        query = db.query(sqlalchemy_model)
+        filters_dict: Dict[str, Any] = filters.model_dump(exclude_unset=True)
+
+        for attr, value in filters_dict.items():
+            if value is not None:
+                query = query.filter(getattr(sqlalchemy_model, attr) == value)
+
+        return query.all()

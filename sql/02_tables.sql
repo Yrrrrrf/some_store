@@ -34,10 +34,28 @@ CREATE TABLE store.product (
     code VARCHAR(50) UNIQUE NOT NULL,   -- Unique product code for easy identification
     description VARCHAR(255) NOT NULL,  -- Detailed description of the product
     unit_price DECIMAL(10, 2) NOT NULL, -- Price per unit of the product
-    image_url VARCHAR(255) DEFAULT ''  -- URL of the product image
---     image_url VARCHAR(255) DEFAULT 'https://via.placeholder.com/150'  -- URL of the product image
+    image_url VARCHAR(255)              -- URL of the product image
 );
 ALTER TABLE store.product ADD CONSTRAINT check_positive_price CHECK (unit_price > 0);
+
+-- Create a function to generate the placeholder image URL
+CREATE OR REPLACE FUNCTION store.generate_image_url()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Generate image URL only if it's not provided
+    IF NEW.image_url IS NULL OR NEW.image_url = '' THEN
+        NEW.image_url := 'https://placehold.co/512x512?text=' || regexp_replace(NEW.description, '\s+', '+', 'g');
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create a trigger to automatically generate the image URL before insert
+CREATE TRIGGER tr_generate_image_url
+BEFORE INSERT ON store.product
+FOR EACH ROW
+EXECUTE FUNCTION store.generate_image_url();
+
 
 -- -----------------------------------------------------------------------------
 -- Table: store.provider

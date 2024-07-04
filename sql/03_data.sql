@@ -1,15 +1,15 @@
 -- Expanded sample data for Products
-INSERT INTO store.product (code, description, unit_price, image_url) VALUES
-('LASER1000', 'LaserJet 1000 Printer', 1900.00, 'https://via.placeholder.com/150?text=LaserJet+1000'),
-('PROJEPSON', 'Epson Projector', 8000.00, 'https://via.placeholder.com/150?text=Epson+Projector'),
-('LAPH6100', 'HP 6100 Laptop', 7000.00, 'https://via.placeholder.com/150?text=HP+6100+Laptop'),
-('DELLXPS15', 'Dell XPS 15 Laptop', 9500.00, 'https://via.placeholder.com/150?text=Dell+XPS+15'),
-('MACBOOKPRO', 'Apple MacBook Pro', 12000.00, 'https://via.placeholder.com/150?text=MacBook+Pro'),
-('SAMSUNGTV', 'Samsung 4K Smart TV', 5500.00, 'https://via.placeholder.com/150?text=Samsung+TV'),
-('LOGIMOUSE', 'Logitech Wireless Mouse', 350.00, 'https://via.placeholder.com/150?text=Logitech+Mouse'),
-('CORSKEY', 'Corsair Mechanical Keyboard', 800.00, 'https://via.placeholder.com/150?text=Corsair+Keyboard'),
-('CANONCAM', 'Canon DSLR Camera', 4500.00, 'https://via.placeholder.com/150?text=Canon+Camera'),
-('BOSEHDPHN', 'Bose Noise Cancelling Headphones', 2000.00, 'https://via.placeholder.com/150?text=Bose+Headphones');
+INSERT INTO store.product (code, description, unit_price) VALUES
+('LASER1000', 'LaserJet 1000 Printer', 1900.00),
+('PROJEPSON', 'Epson Projector', 8000.00),
+('LAPH6100', 'HP 6100 Laptop', 7000.00),
+('DELLXPS15', 'Dell XPS 15 Laptop', 9500.00),
+('MACBOOKPRO', 'Apple MacBook Pro', 12000.00),
+('SAMSUNGTV', 'Samsung 4K Smart TV', 5500.00),
+('LOGIMOUSE', 'Logitech Wireless Mouse', 350.00),
+('CORSKEY', 'Corsair Mechanical Keyboard', 800.00),
+('CANONCAM', 'Canon DSLR Camera', 4500.0),
+('BOSEHDPHN', 'Bose Noise Cancelling Headphones', 2000.00);
 
 -- Expanded sample data for Providers
 INSERT INTO store.provider (name) VALUES

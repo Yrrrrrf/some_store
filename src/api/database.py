@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Tuple as PyTuple, Type, Any, Optional
 from sqlalchemy import *
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from sqlalchemy.ext.declarative import declared_attr
 from pydantic import BaseModel, create_model
 from dotenv import load_dotenv
@@ -19,23 +19,23 @@ class DatabaseManager:
     """Manages database connection and session creation."""
 
     def __init__(self):
-        self.db_url = self._get_db_url()
-        self.engine = create_engine(self.db_url)
+        self.db_url: str = self._get_db_url()
+        self.engine: Engine = create_engine(self.db_url)
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
 
     @staticmethod
     def _get_db_url() -> str:
         """Construct database URL from environment variables."""
-        # db_user = os.getenv("DB_USER", "some_store_owner")
-        # db_password = os.getenv("DB_PASSWORD", "store_password")
-        # db_host = os.getenv("DB_HOST", "localhost")
-        # db_name = os.getenv("DB_NAME", "some_store")
-        # return f"postgresql://{db_user}:{db_password}@{db_host}/{db_name}"
-        return f"postgresql://some_store_owner:store_password@localhost/some_store"
+        db_user: str = os.getenv("DB_USER", "some_store_owner")
+        db_password: str = os.getenv("DB_PASSWORD", "store_password")
+        db_host: str = os.getenv("DB_HOST", "localhost")
+        db_name: str = os.getenv("DB_NAME", "some_store")
+        return f"postgresql://{db_user}:{db_password}@{db_host}/{db_name}"
+        # return f"postgresql://some_store_owner:store_password@localhost/some_store"
 
     def get_db(self):
         """Yield a database session."""
-        db = self.SessionLocal()
+        db: Session = self.SessionLocal()
         try:
             yield db
         finally:
@@ -87,7 +87,12 @@ class ModelGenerator:
         return type(table_name.capitalize(), (Base,), attrs)
 
     @classmethod
-    def generate_pydantic_model(cls, db, table: str, schema: str = '') -> Type[BaseModel]:
+    def generate_pydantic_model(
+        cls, 
+        db: Session,
+        table: str, 
+        schema: str = ''
+    ) -> Type[BaseModel]:
         """Generate Pydantic model from table metadata."""
         query = """
             SELECT column_name, data_type 
@@ -107,19 +112,27 @@ class ModelGenerator:
 
         return create_model(f"{table}Pydantic", **fields)
 
+
 class ViewModelGenerator(ModelGenerator):
     """Generates SQLAlchemy and Pydantic models for views."""
 
     @classmethod
-    def generate_sqlalchemy_view_model(cls, table_name: str, columns: List[PyTuple[str, str]], schema: str) -> Type[Base]:
+    def generate_sqlalchemy_view_model(
+        cls, 
+        table_name: str,
+        columns: List[PyTuple[str, str]], 
+        schema: str
+    ) -> Type[Base]:
         """Generate SQLAlchemy model class for a view."""
         attrs = {
             '__tablename__': table_name,
             '__table_args__': {'schema': schema}
         }
 
+        print(f"\t\tSQLAlchemy Model")
         primary_keys = []
         for column_name, column_type in columns:
+            print(f"\t\t\tColumn: {column_name}: {column_type}")
             column_class, _ = cls.SQL_TYPE_MAPPING.get(column_type, str)
             column = Column(column_class)
             attrs[column_name] = column
@@ -130,10 +143,15 @@ class ViewModelGenerator(ModelGenerator):
         return type(table_name.capitalize(), (Base,), attrs)
 
 # Model generation functions
-def generate_models(engine: Engine, schemas: List[str]) -> Dict[str, PyTuple[Type[Base], Type[BaseModel]]]:
+def generate_models(
+    engine: Engine, 
+    schemas: List[str]
+) -> Dict[str, PyTuple[Type[Base], Type[BaseModel]]]:
     """Generate SQLAlchemy and Pydantic models for tables in specified schemas."""
     combined_models = {}
     metadata = MetaData()
+
+    print(f"Generating Table Models")
 
     for schema in schemas:
         print(f"Schema: {schema.capitalize()}")
@@ -151,15 +169,24 @@ def generate_models(engine: Engine, schemas: List[str]) -> Dict[str, PyTuple[Typ
 
     return combined_models
 
-def generate_views(engine: Engine, schemas: List[str]) -> Dict[str, PyTuple[Type[Base], Type[BaseModel]]]:
+def generate_views(
+    engine: Engine, 
+    schemas: List[str]
+) -> Dict[str, PyTuple[Type[Base], Type[BaseModel]]]:
     """Generate SQLAlchemy and Pydantic models for views in specified schemas."""
     combined_models = {}
     metadata = MetaData()
     metadata.reflect(bind=engine, views=True, extend_existing=True)
 
+    print(f"Generating View Models")
+
     for schema in schemas:
+        print(f"Schema: {schema.capitalize()}")
         for table_name, table in metadata.tables.items():
-            if table.schema == schema:
+            if table_name.startswith('report_'):
+                table_name = table_name.split('.')[-1]
+                print(f"\tView: {table_name}")
+
                 columns = [(col.name, col.type.__class__.__name__.lower()) for col in table.columns]
                 sqlalchemy_model = ViewModelGenerator.generate_sqlalchemy_view_model(table_name, columns, schema)
                 pydantic_model = ViewModelGenerator.generate_pydantic_model(engine.connect(), table_name, schema)
@@ -167,10 +194,13 @@ def generate_views(engine: Engine, schemas: List[str]) -> Dict[str, PyTuple[Type
 
     return combined_models
 
-# Initialization
+
+# * Database Initialization
 db_manager = DatabaseManager()
+
+# * Generate models and views
 store_models = generate_models(db_manager.engine, ['store'])
-# public_views = generate_views(db_manager.engine, ['public'])
+store_views = generate_views(db_manager.engine, ['store'])
 
 # Combine all models (uncomment if needed)
 # all_models = {**store_models, **public_views}
