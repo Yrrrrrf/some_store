@@ -182,11 +182,6 @@ export async function createRecord(
 }
 
 
-
-
-
-
-
 /**
  * Deletes a record from a table.
  * @param apiUrl - The base API URL.
@@ -201,7 +196,7 @@ export async function deleteRecord(
     field: string,
     value: string | number
 ): Promise<void> {
-    const url = `${apiUrl}/${tableName.replace(/ /g, '_').toLowerCase()}/${field}=${value}`;
+    const url = `${apiUrl}/${tableName.replace(/ /g, '_').toLowerCase()}?${field}=${value}`;
     try {
         await apiRequest(url, { method: 'DELETE' });
         console.log(`Successfully deleted record from ${tableName} where ${field} = ${value}`);
