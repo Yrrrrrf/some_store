@@ -235,23 +235,3 @@ export async function updateRecord(
         throw error;
     }
 }
-
-
-
-export async function uploadImage(apiUrl: string, file: File): Promise<string> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${apiUrl}/upload-image`, {
-        method: 'POST',
-        body: formData
-    });
-
-    if (!response.ok) {
-        throw new Error('Image upload failed');
-    }
-
-    const result = await response.json();
-    return result.url;
-}
-

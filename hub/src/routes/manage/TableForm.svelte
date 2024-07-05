@@ -2,7 +2,7 @@
     import { createEventDispatcher, onMount } from 'svelte';
     import { fetchTableRows, fetchColumns, snakeToCamelWithSpaces, createRecord, updateRecord } from '../../utils';
     import { api_url } from '../../utils';
-    import { ProgressRadial, FileDropzone } from '@skeletonlabs/skeleton';
+    import { ProgressRadial } from '@skeletonlabs/skeleton';
 
     export let tableName: string;
     export let editingItem: any = null;
@@ -18,37 +18,7 @@
 
     const dispatch = createEventDispatcher();
 
-    let files: File[] = [];
-    let uploadedImageUrl = '';
-
-    /**
-     * Handles file upload
-     */
-    async function handleFileUpload() {
-        if (files && files.length > 0) {
-            const file = files[0];
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const response = await fetch(`${apiUrl}/upload-image`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    uploadedImageUrl = result.url;
-                    formData['image_url'] = uploadedImageUrl;
-                } else {
-                    throw new Error('Image upload failed');
-                }
-            } catch (error) {
-                console.error('Error uploading image:', error);
-                errorMessage = 'Failed to upload image. Please try again.';
-            }
-        }
-    }
+    let selectedFile: File | null = null;
 
     /**
      * Generates a local URL for the uploaded file
@@ -58,7 +28,6 @@
     function getLocalImageUrl(file: File): string {
         return URL.createObjectURL(file);
     }
-
 
     /**
      * Gets today's date in YYYY-MM-DD format
@@ -180,6 +149,25 @@
                 delete submissionData['reference'];
             }
 
+            // Handle image upload
+            if (selectedFile && tableName === 'product') {
+                const productCode = submissionData['code'] || 'default';
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+
+                const uploadResponse = await fetch(`${apiUrl}/upload-image/${productCode}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (uploadResponse.ok) {
+                    const result = await uploadResponse.json();
+                    submissionData['image_url'] = result.url;
+                } else {
+                    throw new Error('Image upload failed');
+                }
+            }
+
             console.log('Form submitted:', submissionData);
 
             let result;
@@ -188,6 +176,8 @@
             } else {
                 result = await createRecord(apiUrl, tableName, submissionData);
             }
+
+            dispatch('submit', result);
         } catch (error) {
             console.error('Error submitting form:', error);
             if (error.response && error.response.status === 422) {
@@ -270,16 +260,17 @@
                             />
                         {:else if column.includes('image_url')}
                             <label for="image_upload" class="label">Image Upload</label>
-                            <FileDropzone name="image_upload" accept="image/*" bind:files on:change={handleFileUpload}>
-                                <svelte:fragment slot="lead">
-                                    <i class="fa-solid fa-upload" />
-                                </svelte:fragment>
-                                <svelte:fragment slot="message">
-                                    Upload your image here
-                                </svelte:fragment>
-                            </FileDropzone>
-                            {#if files.length > 0}
-                                <img src={getLocalImageUrl(files[0])} alt="Uploaded image preview" class="mt-2 max-w-full h-auto max-h-48 object-contain" />
+                            <input
+                                    type="file"
+                                    id="image_upload"
+                                    accept="image/*"
+                                    on:change={(e) => selectedFile = e.target.files[0]}
+                                    class="input"
+                            />
+                            {#if selectedFile}
+                                <img src={getLocalImageUrl(selectedFile)} alt="Selected image preview" class="mt-2 max-w-full h-auto max-h-48 object-contain" />
+                            {:else if formData['image_url']}
+                                <img src={formData['image_url']} alt="Current product image" class="mt-2 max-w-full h-auto max-h-48 object-contain" />
                             {/if}
                         {:else}
                             <input
@@ -290,7 +281,6 @@
                                     placeholder={tableName === 'sale' && column === 'reference' ? 'Leave empty for auto-generation' : ''}
                             />
                         {/if}
-
                     </div>
                 {/if}
             {/each}

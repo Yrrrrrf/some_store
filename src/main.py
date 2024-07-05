@@ -3,6 +3,7 @@
 """
 
 # ? 3rd party imports
+from pathlib import Path
 import shutil
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,15 +39,31 @@ app.add_middleware(  # Add CORS middleware
 )
 
 
-# Mount a static files directory
+
+# Mount the uploads directory
 app.mount("/static", StaticFiles(directory="hub/static"), name="static")
 
-@app.post("/upload-image")
-async def upload_image(file: UploadFile = File(...)):
-    file_location = f"hub/static/uploads/{file.filename}"
-    with open(file_location, "wb+") as file_object:
-        shutil.copyfileobj(file.file, file_object)
-    return {"url": f"hub/static/uploads/{file.filename}"}
+@app.post("/upload-image/{product_code}")
+async def upload_image(product_code: str, file: UploadFile = File(...)):
+    upload_dir = "hub/static/uploads"
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Get file extension
+    file_extension = Path(file.filename).suffix
+    
+    # Create a new filename using the product code
+    new_filename = f"{product_code}{file_extension}"
+    
+    file_location = f"{upload_dir}/{new_filename}"
+    
+    try:
+        with open(file_location, "wb+") as file_object:
+            shutil.copyfileobj(file.file, file_object)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not upload file: {str(e)}")
+    
+    return {"url": f"/hub/static/uploads/{new_filename}"}
+
 
 
 # * Create routes
