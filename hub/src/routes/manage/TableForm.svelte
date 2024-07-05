@@ -2,7 +2,7 @@
     import { createEventDispatcher, onMount } from 'svelte';
     import { fetchTableRows, fetchColumns, snakeToCamelWithSpaces, createRecord, updateRecord } from '../../utils';
     import { api_url } from '../../utils';
-    import { ProgressRadial } from '@skeletonlabs/skeleton';
+    import { ProgressRadial, FileDropzone } from '@skeletonlabs/skeleton';
 
     export let tableName: string;
     export let editingItem: any = null;
@@ -18,66 +18,150 @@
 
     const dispatch = createEventDispatcher();
 
+    let files: File[] = [];
+    let uploadedImageUrl = '';
+
+    /**
+     * Handles file upload
+     */
+    async function handleFileUpload() {
+        if (files && files.length > 0) {
+            const file = files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${apiUrl}/upload-image`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    uploadedImageUrl = result.url;
+                    formData['image_url'] = uploadedImageUrl;
+                } else {
+                    throw new Error('Image upload failed');
+                }
+            } catch (error) {
+                console.error('Error uploading image:', error);
+                errorMessage = 'Failed to upload image. Please try again.';
+            }
+        }
+    }
+
+    /**
+     * Generates a local URL for the uploaded file
+     * @param {File} file - The uploaded file
+     * @returns {string} Local URL for the file
+     */
+    function getLocalImageUrl(file: File): string {
+        return URL.createObjectURL(file);
+    }
+
+
+    /**
+     * Gets today's date in YYYY-MM-DD format
+     * @returns {string} Today's date
+     */
     function getTodayDate(): string {
         return new Date().toISOString().split('T')[0];
     }
 
+    /**
+     * Initializes the form with data
+     */
     async function initializeForm() {
         isLoading = true;
-        await fetchColumns(apiUrl, tableName, (data) => {
-            columns = data;
-            formData = columns.reduce((acc, col) => {
-                if (isDateColumn(col)) {
-                    return { ...acc, [col]: getTodayDate() };
-                }
-                return { ...acc, [col]: '' };
-            }, {});
-        });
-
-        await Promise.all(columns.map(async (column) => {
-            if (column.endsWith('_id')) {
-                const referencedTable = column.slice(0, -3);
-                await fetchForeignKeyOptions(referencedTable);
-            }
-        }));
-
-        if (editingItem) {
-            formData = { ...editingItem };
-            // Format date fields
-            columns.forEach(column => {
-                if (isDateColumn(column) && formData[column]) {
-                    formData[column] = formatDateForInput(formData[column]);
-                }
+        try {
+            await fetchColumns(apiUrl, tableName, (data) => {
+                columns = data;
+                formData = columns.reduce((acc, col) => {
+                    if (isDateColumn(col)) {
+                        return { ...acc, [col]: getTodayDate() };
+                    }
+                    return { ...acc, [col]: '' };
+                }, {});
             });
+
+            await Promise.all(columns.map(async (column) => {
+                if (column.endsWith('_id')) {
+                    const referencedTable = column.slice(0, -3);
+                    await fetchForeignKeyOptions(referencedTable);
+                }
+            }));
+
+            if (editingItem) {
+                formData = { ...editingItem };
+                // Format date fields
+                columns.forEach(column => {
+                    if (isDateColumn(column) && formData[column]) {
+                        formData[column] = formatDateForInput(formData[column]);
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error initializing form:', error);
+            errorMessage = 'Failed to load form data. Please try again.';
+        } finally {
+            isLoading = false;
         }
-        isLoading = false;
     }
 
-    api_url.subscribe(value => apiUrl = value);
-
+    /**
+     * Fetches foreign key options for a referenced table
+     * @param {string} referencedTable - The name of the referenced table
+     */
     async function fetchForeignKeyOptions(referencedTable: string) {
-        await fetchTableRows(apiUrl, referencedTable, {}, (data) => {
-            foreignKeyOptions[referencedTable] = data;
-        });
+        try {
+            await fetchTableRows(apiUrl, referencedTable, {}, (data) => {
+                foreignKeyOptions[referencedTable] = data;
+            });
+        } catch (error) {
+            console.error(`Error fetching foreign key options for ${referencedTable}:`, error);
+        }
     }
 
+    /**
+     * Checks if a column is an ID column
+     * @param {string} column - The column name
+     * @returns {boolean} True if it's an ID column, false otherwise
+     */
     function isIdColumn(column: string): boolean {
         return column.toLowerCase() === 'id';
     }
 
+    /**
+     * Checks if a column is a date column
+     * @param {string} column - The column name
+     * @returns {boolean} True if it's a date column, false otherwise
+     */
     function isDateColumn(column: string): boolean {
         return column.toLowerCase().includes('date');
     }
 
+    /**
+     * Formats a date string for input fields
+     * @param {string} dateString - The date string to format
+     * @returns {string} Formatted date string
+     */
     function formatDateForInput(dateString: string): string {
         const date = new Date(dateString);
         return date.toISOString().split('T')[0];
     }
 
+    /**
+     * Formats a date string for submission
+     * @param {string} dateString - The date string to format
+     * @returns {string} Formatted date string
+     */
     function formatDateForSubmission(dateString: string): string {
         return dateString; // 'yyyy-mm-dd' format is already correct for submission
     }
 
+    /**
+     * Handles form submission
+     */
     async function handleSubmit() {
         errorMessage = '';
         isLoading = true;
@@ -90,6 +174,12 @@
             });
 
             delete submissionData['id'];
+
+            // Remove empty 'reference' field for 'sale' table
+            if (tableName === 'sale' && !submissionData['reference']) {
+                delete submissionData['reference'];
+            }
+
             console.log('Form submitted:', submissionData);
 
             let result;
@@ -111,6 +201,9 @@
         }
     }
 
+    /**
+     * Handles form cancellation
+     */
     function handleCancel() {
         dispatch('cancel');
     }
@@ -143,7 +236,12 @@
             {#each columns as column}
                 {#if !isIdColumn(column)}
                     <div class="form-field">
-                        <label for={column} class="label">{snakeToCamelWithSpaces(column)}</label>
+                        <label for={column} class="label">
+                            {snakeToCamelWithSpaces(column)}
+                            {#if tableName === 'sale' && column === 'reference'}
+                                <span class="text-sm text-gray-500 ml-2">(Optional)</span>
+                            {/if}
+                        </label>
                         {#if column.endsWith('_id') && foreignKeyOptions[column.slice(0, -3)]}
                             <select
                                     id={column}
@@ -170,14 +268,29 @@
                                     bind:value={formData[column]}
                                     class="input"
                             />
+                        {:else if column.includes('image_url')}
+                            <label for="image_upload" class="label">Image Upload</label>
+                            <FileDropzone name="image_upload" accept="image/*" bind:files on:change={handleFileUpload}>
+                                <svelte:fragment slot="lead">
+                                    <i class="fa-solid fa-upload" />
+                                </svelte:fragment>
+                                <svelte:fragment slot="message">
+                                    Upload your image here
+                                </svelte:fragment>
+                            </FileDropzone>
+                            {#if files.length > 0}
+                                <img src={getLocalImageUrl(files[0])} alt="Uploaded image preview" class="mt-2 max-w-full h-auto max-h-48 object-contain" />
+                            {/if}
                         {:else}
                             <input
                                     type="text"
                                     id={column}
                                     bind:value={formData[column]}
                                     class="input"
+                                    placeholder={tableName === 'sale' && column === 'reference' ? 'Leave empty for auto-generation' : ''}
                             />
                         {/if}
+
                     </div>
                 {/if}
             {/each}

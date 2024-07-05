@@ -1,6 +1,5 @@
 from fastapi import Depends, HTTPException, APIRouter
 from sqlalchemy.orm import Session
-from sqlalchemy import Integer
 from pydantic import BaseModel
 from typing import List, Dict, Tuple, Type, Callable, Any
 from src.api.database import Base

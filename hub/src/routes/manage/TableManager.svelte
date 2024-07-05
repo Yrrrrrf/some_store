@@ -43,27 +43,6 @@
     }
 
     /**
-     * Handles form submission for creating or updating records
-     * @param {CustomEvent} event - The form submission event
-     */
-    async function handleFormSubmit(event: CustomEvent) {
-        const formData = event.detail;
-        try {
-            if (editingItem) {
-                await updateRecord(apiUrl, tableName, 'id', editingItem.id, formData);
-            } else {
-                await createRecord(apiUrl, tableName, formData);
-            }
-            showForm = false;
-            editingItem = null;
-            await loadTableData();
-        } catch (error) {
-            console.error('Error submitting form:', error);
-            errorMessage = 'Failed to save record. Please check your inputs and try again.';
-        }
-    }
-
-    /**
      * Handles the edit action for a table item
      * @param {CustomEvent} event - The edit event
      */
@@ -110,7 +89,6 @@
             <TableForm
                     {tableName}
                     {editingItem}
-                    on:submit={handleFormSubmit}
                     on:cancel={() => { showForm = false; editingItem = null; }}
             />
         {/if}

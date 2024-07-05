@@ -3,8 +3,10 @@
 """
 
 # ? 3rd party imports
-from fastapi import FastAPI
+import shutil
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 # ? Local imports
 from src.api.routes import *
@@ -34,6 +36,17 @@ app.add_middleware(  # Add CORS middleware
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Mount a static files directory
+app.mount("/static", StaticFiles(directory="hub/static"), name="static")
+
+@app.post("/upload-image")
+async def upload_image(file: UploadFile = File(...)):
+    file_location = f"hub/static/uploads/{file.filename}"
+    with open(file_location, "wb+") as file_object:
+        shutil.copyfileobj(file.file, file_object)
+    return {"url": f"hub/static/uploads/{file.filename}"}
 
 
 # * Create routes

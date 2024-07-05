@@ -113,7 +113,3 @@
         </div>
     </div>
 {/if}
-
-<style>
-    /* ... (keep existing styles) ... */
-</style>
