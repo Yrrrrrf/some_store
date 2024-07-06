@@ -235,3 +235,53 @@ export async function updateRecord(
         throw error;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+export const productStore = writable<any[]>([]);
+
+export async function fetchProducts(apiUrl: string): Promise<any[]> {
+    try {
+        const response = await fetch(`${apiUrl}/product`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const products = await response.json();
+        productStore.set(products);
+        return products;
+    } catch (error) {
+        console.error('Error fetching products:', error);
+        throw error;
+    }
+}
+
+export function searchProducts(products: any[], searchTerm: string, categoryId: string): any[] {
+    return products.filter(product =>
+        (product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            product.code.toLowerCase().includes(searchTerm.toLowerCase())) &&
+        (categoryId === '' || product.category_id === parseInt(categoryId))
+    );
+}
+
+export function sortProducts(products: any[], sortBy: string, sortOrder: 'asc' | 'desc'): any[] {
+    return [...products].sort((a, b) => {
+        if (a[sortBy] < b[sortBy]) return sortOrder === 'asc' ? -1 : 1;
+        if (a[sortBy] > b[sortBy]) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+    });
+}

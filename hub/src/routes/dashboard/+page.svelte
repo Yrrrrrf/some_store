@@ -1,63 +1,101 @@
 <script lang="ts">
-    import { Tab, TabGroup, ProgressRadial, LightSwitch } from "@skeletonlabs/skeleton";
-    import { fade } from 'svelte/transition';
-    import TabContent from './TabContent.svelte';
-    import { api_url, current_view, current_schema, current_table, current_tab } from '../../utils';
-    import { snakeToCamelWithSpaces, fetchTables, fetchViews } from '../../utils';
-    import { onMount } from "svelte";
+    import { onMount } from 'svelte';
+    import ProductCard from './ProductCard.svelte';
+    import { api_url, productStore, fetchProducts, searchProducts, sortProducts } from '../../utils';
+    import { writable } from 'svelte/store';
 
-    let apiUrl: string = '';
-    $: api_url.subscribe(value => apiUrl = value);
+    let isLoading = true;
+    let searchTerm = '';
+    let sortBy = 'description';
+    let sortOrder: 'asc' | 'desc' = 'asc';
+    let categories: { id: number; name: string }[] = [];
+    let selectedCategory = '';
 
-    let currentTab: string = 'tables';
-    $: current_tab.subscribe(value => currentTab = value);
+    $: filteredAndSortedProducts = sortProducts(
+        searchProducts($productStore, searchTerm, selectedCategory),
+        sortBy,
+        sortOrder
+    );
 
-    let tabs: string[] = ['tables', 'views', 'some'];
-    let tables: string[] = [];
-    let views: string[] = [];
-    let isLoading: boolean = true;
+    async function fetchCategories(apiUrl: string): Promise<void> {
+        try {
+            const response = await fetch(`${apiUrl}/category`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            categories = await response.json();
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+            // Handle error (e.g., show error message to user)
+        }
+    }
 
     onMount(async () => {
-        isLoading = true;
-        await Promise.all([
-            fetchTables(apiUrl, (data) => tables = data),
-            fetchViews(apiUrl, (data) => views = data)
-        ]);
-        isLoading = false;
+        try {
+            await Promise.all([fetchProducts($api_url), fetchCategories($api_url)]);
+        } catch (error) {
+            console.error('Failed to fetch data:', error);
+            // Handle error (e.g., show error message to user)
+        } finally {
+            isLoading = false;
+        }
     });
+
+    function handleSort(field: string) {
+        if (sortBy === field) {
+            sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortBy = field;
+            sortOrder = 'asc';
+        }
+    }
 </script>
 
-<div class="container mx-auto p-4" in:fade="{{ duration: 300 }}">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold">Data View</h1>
+<svelte:head>
+    <title>Dashboard - Product Overview</title>
+</svelte:head>
+
+<div class="container mx-auto p-4">
+    <h1 class="text-3xl font-bold mb-6">Product Dashboard</h1>
+
+    <div class="flex flex-wrap gap-4 mb-4">
+        <input
+                type="text"
+                bind:value={searchTerm}
+                placeholder="Search products..."
+                class="input input-bordered w-full max-w-xs"
+        />
+        <select
+                bind:value={selectedCategory}
+                class="select select-bordered w-full max-w-xs"
+        >
+            <option value="">All Categories</option>
+            {#each categories as category}
+                <option value={category.id}>{category.name}</option>
+            {/each}
+        </select>
     </div>
 
-    <nav class="text-sm breadcrumbs mb-4">
-        <ul>
-            <li><a href="/dashboard">Dashboard</a></li>
-            <li>{currentTab}</li>
-        </ul>
-    </nav>
-
-    <TabGroup>
-        {#each tabs as tab}
-            <Tab bind:group={currentTab} name={tab} value={tab} on:change={() => current_tab.set(currentTab)}>
-                {tab.toUpperCase()}
-            </Tab>
-        {/each}
-    </TabGroup>
+    <div class="mb-4">
+        <button on:click={() => handleSort('description')} class="btn btn-sm mr-2">
+            Sort by Name {sortBy === 'description' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+        </button>
+        <button on:click={() => handleSort('unit_price')} class="btn btn-sm">
+            Sort by Price {sortBy === 'unit_price' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+        </button>
+    </div>
 
     {#if isLoading}
         <div class="flex justify-center items-center h-64">
-            <ProgressRadial stroke={100} meter="stroke-primary-500" track="stroke-primary-500/30" />
+            <div class="loader">Loading...</div>
         </div>
+    {:else if filteredAndSortedProducts.length === 0}
+        <p>No products found matching the current filters.</p>
     {:else}
-        {#if currentTab === 'views'}
-            <TabContent items={views} t_type="views"/>
-        {:else if currentTab === 'tables'}
-            <TabContent items={tables} t_type="tables"/>
-        {:else}
-            <p>Content for '{currentTab}' tab is not implemented yet.</p>
-        {/if}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {#each filteredAndSortedProducts as product (product.id)}
+                <ProductCard {product} />
+            {/each}
+        </div>
     {/if}
 </div>

@@ -1,15 +1,40 @@
--- Expanded sample data for Products
-INSERT INTO store.product (code, description, unit_price) VALUES
-('LASER1000', 'LaserJet 1000 Printer', 1900.00),
-('PROJEPSON', 'Epson Projector', 8000.00),
-('LAPH6100', 'HP 6100 Laptop', 7000.00),
-('DELLXPS15', 'Dell XPS 15 Laptop', 9500.00),
-('MACBOOKPRO', 'Apple MacBook Pro', 12000.00),
-('SAMSUNGTV', 'Samsung 4K Smart TV', 5500.00),
-('LOGIMOUSE', 'Logitech Wireless Mouse', 350.00),
-('CORSKEY', 'Corsair Mechanical Keyboard', 800.00),
-('CANONCAM', 'Canon DSLR Camera', 4500.0),
-('BOSEHDPHN', 'Bose Noise Cancelling Headphones', 2000.00);
+-- Insert more general categories
+INSERT INTO store.category (id, name) VALUES
+(1, 'Electronics'),
+(2, 'Computers'),
+(3, 'Audio & Video'),
+(4, 'Office Equipment'),
+(5, 'Gaming'),
+(6, 'Smart Home'),
+(7, 'Photography'),
+(8, 'Accessories');
+
+-- Reset the category id sequence
+SELECT setval('store.category_id_seq', (SELECT MAX(id) FROM store.category));
+
+
+-- Modified product inserts with hardcoded category_id
+INSERT INTO store.product (code, description, unit_price, category_id) VALUES
+('LASER1000', 'LaserJet 1000 Printer', 1900.00, 4),  -- Office Equipment
+('PROJEPSON', 'Epson Projector', 8000.00, 3),        -- Audio & Video
+('LAPH6100', 'HP 6100 Laptop', 7000.00, 2),          -- Computers
+('DELLXPS15', 'Dell XPS 15 Laptop', 9500.00, 2),     -- Computers
+('MACBOOKPRO', 'Apple MacBook Pro', 12000.00, 2),    -- Computers
+('SAMSUNGTV', 'Samsung 4K Smart TV', 5500.00, 3),    -- Audio & Video
+('LOGIMOUSE', 'Logitech Wireless Mouse', 350.00, 8), -- Accessories
+('CORSKEY', 'Corsair Mechanical Keyboard', 800.00, 8), -- Accessories
+('CANONCAM', 'Canon DSLR Camera', 4500.00, 7),       -- Photography
+('BOSEHDPHN', 'Bose Noise Cancelling Headphones', 2000.00, 3), -- Audio & Video
+('DESKPRO', 'Professional Office Desk', 3500.00, 4), -- Office Equipment
+('SMARTHUB', 'Smart Home Control Hub', 1200.00, 6),  -- Smart Home
+('GAMEPADT', 'Wireless Gaming Controller', 600.00, 5), -- Gaming
+('TABLETPC', 'High-Performance Tablet', 5000.00, 2), -- Computers
+('SMARTWATCH', 'Fitness Tracking Smartwatch', 1500.00, 1), -- Electronics
+('DRONEFLY', 'Professional Camera Drone', 3000.00, 7), -- Photography
+('SPEAKERSMART', 'AI-Powered Smart Speaker', 800.00, 6), -- Smart Home
+('CONSOLEGAME', 'Next-Gen Gaming Console', 4500.00, 5), -- Gaming
+('SECUCAM', 'Wireless Security Camera', 1200.00, 6), -- Smart Home
+('PORTCHARGER', 'Portable Power Bank', 500.00, 8);   -- Accessories
 
 -- Expanded sample data for Providers
 INSERT INTO store.provider (name) VALUES

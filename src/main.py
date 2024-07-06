@@ -53,7 +53,7 @@ async def upload_image(product_code: str, file: UploadFile = File(...)):
     
     # Create a new filename using the product code
     new_filename = f"{product_code}{file_extension}"
-    
+
     file_location = f"{upload_dir}/{new_filename}"
     
     try:
@@ -62,7 +62,7 @@ async def upload_image(product_code: str, file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Could not upload file: {str(e)}")
     
-    return {"url": f"/hub/static/uploads/{new_filename}"}
+    return {"url": f"/uploads/{new_filename}"}
 
 
 

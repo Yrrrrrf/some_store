@@ -113,7 +113,7 @@
 
                 if (response.ok) {
                     const result = await response.json();
-                    const updatedItem = { ...uploadingImage, image_url: result.url };
+                    const updatedItem = { ...uploadingImage, image_url: `/static/uploads/${result.filename}` }; // Update image URL to use the correct directory
                     const index = data.findIndex(item => item.id === uploadingImage.id);
                     if (index !== -1) {
                         data[index] = updatedItem;
@@ -164,7 +164,7 @@
                     <td>
                         {#if isImageColumn(column)}
                             <div class="relative">
-                                <img src={item[column] || '/placeholder-image.png'} alt={item.description} class="w-16 h-16 object-cover rounded" />
+                                <img src={item[column] ? item[column] : '/placeholder-image.png'} alt={item.description} class="w-16 h-16 object-cover rounded" />
                                 <button
                                         class="absolute top-0 right-0 bg-primary-500 text-white rounded-full p-1"
                                         on:click={() => initiateImageUpload(item)}
