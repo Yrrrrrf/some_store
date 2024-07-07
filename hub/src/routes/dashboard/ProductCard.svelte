@@ -62,7 +62,6 @@
     <div class="p-4">
         <h2 class="h3 mb-2 line-clamp-2">{snakeToCamelWithSpaces(product.description)}</h2>
         <div class="flex justify-between items-center mt-4">
-            <p>{product.category_id}</p>
             <p class="text-lg font-bold text-primary-500">${product.unit_price.toFixed(2)}</p>
             <button class="btn variant-filled-primary transition-all duration-300" class:scale-110={isHovered} on:click={handleClick}>
                 Add to Cart

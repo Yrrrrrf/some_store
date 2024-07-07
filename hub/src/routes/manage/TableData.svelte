@@ -6,7 +6,6 @@
 
     export let columns: string[];
     export let data: any[];
-    export let apiUrl: string;
 
     const dispatch = createEventDispatcher();
 

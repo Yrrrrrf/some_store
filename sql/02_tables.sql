@@ -194,7 +194,6 @@ CREATE TABLE store.cart (
     customer_id INT NOT NULL,
     product_id INT NOT NULL,
     quantity INT NOT NULL,
-    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (customer_id) REFERENCES store.customer(id),
     FOREIGN KEY (product_id) REFERENCES store.product(id),
     CONSTRAINT check_positive_quantity CHECK (quantity > 0),
