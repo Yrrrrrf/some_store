@@ -6,42 +6,21 @@
     import { ShoppingCart } from 'lucide-svelte';
     import CartSummary from '$lib/components/store/CartSummary.svelte';
     import CheckoutForm from '$lib/components/store/CheckoutForm.svelte';
+    import SaleSuccess from '$lib/components/store/SaleSuccess.svelte';
     import { fetchCartItems, fetchProductDetails } from '$lib/utils/cartUtils';
     import type { CartItem, Product } from '$lib/types';
 
-    /**
-     * Represents the items in the user's cart.
-     */
     let cartItems: CartItem[] = [];
-
-    /**
-     * Stores details of products in the cart.
-     */
     let productDetails: Map<number, Product> = new Map();
-
-    /**
-     * Indicates whether data is currently being loaded.
-     */
     let isLoading = true;
-
-    /**
-     * Stores any error messages encountered during data fetching or processing.
-     */
     let error: string | null = null;
+    let saleCompleted = false;
 
-    /**
-     * Calculates the total price of items in the cart.
-     */
     $: total = cartItems.reduce((sum, item) => {
         const product = productDetails.get(item.product_id);
         return sum + (product ? item.quantity * product.unit_price : 0);
     }, 0);
 
-    /**
-     * Handles updating the quantity of an item in the cart.
-     * @param item - The cart item to update.
-     * @param change - The amount to change the quantity by.
-     */
     async function handleUpdateQuantity(item: CartItem, change: number) {
         const newQuantity = item.quantity + change;
         if (newQuantity > 0) {
@@ -58,10 +37,6 @@
         }
     }
 
-    /**
-     * Handles removing an item from the cart.
-     * @param item - The cart item to remove.
-     */
     async function handleRemoveItem(item: CartItem) {
         try {
             await apiClient.deleteRecord('cart', 'id', item.id);
@@ -70,6 +45,11 @@
             console.error('Error removing item:', e);
             error = 'Failed to remove item';
         }
+    }
+
+    function saleSuccess() {
+        console.log('Sale successful');
+        saleCompleted = true;
     }
 
     onMount(async () => {
@@ -101,6 +81,8 @@
         <p class="text-error-500 p-4 text-center">{error}</p>
     {:else if cartItems.length === 0}
         <p class="p-4 text-center text-xl">Your cart is empty</p>
+    {:else if saleCompleted}
+        <SaleSuccess />
     {:else}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div class="card variant-soft-surface">
@@ -128,6 +110,7 @@
                             {total}
                             {cartItems}
                             {productDetails}
+                            on:sale-success={() => saleSuccess()}
                     />
                 </div>
             </div>
