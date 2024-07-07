@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { fetchColumns, fetchTableRows, createRecord, updateRecord, deleteRecord } from '../../utils';
+    import { fetchColumns, fetchTableRows, createRecord, updateRecord, deleteRecord } from '$lib/utils/utils';
     import TableForm from './TableForm.svelte';
     import TableData from './TableData.svelte';
     import { ProgressRadial } from '@skeletonlabs/skeleton';

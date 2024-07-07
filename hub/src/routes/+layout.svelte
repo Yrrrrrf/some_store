@@ -1,18 +1,22 @@
 <script lang="ts">
     import '../app.postcss';
-    import { AppShell, AppBar, LightSwitch } from '@skeletonlabs/skeleton';
-    import { setContext } from 'svelte';
-    import { writable } from 'svelte/store';
-    import SomeThemeSelector from './SomeThemeSelector.svelte';
-    import { initializeHighlightJS, initializeFloatingUI } from '$lib/utils/initialization';
 
-    // Create a store for the API URL and set it in the context
-    const apiUrl = writable('http://127.0.0.1:8000');
-    setContext('apiUrl', apiUrl);
+    import {AppBar, AppShell, LightSwitch, initializeStores } from '@skeletonlabs/skeleton';
+    import { initializeFloatingUI, initializeHighlightJS } from "$lib/utils/initialization";
+    import ThemeSelector from "$lib/components/common/ThemeSelector.svelte";
 
-    // Initialize Highlight.js and Floating UI
-    initializeHighlightJS();
-    initializeFloatingUI();
+    initializeFloatingUI();  // Initialize floating UI elements (popups, tooltips, etc.)
+    initializeHighlightJS();  // Initialize Highlight.js for code blocks
+
+    // use the api_url var declared on the $lib/utils/app_stores.ts file
+    import { api_url } from "$lib/utils/app_stores";
+    import {goto} from "$app/navigation";
+
+    $: apiUrl = api_url;
+
+    // Initialize the stores
+    initializeStores();
+
 </script>
 
 <svelte:head>
@@ -24,23 +28,23 @@
         <AppBar>
             <svelte:fragment slot="lead">
                 <strong class="text-xl uppercase pr-2">Welcome to</strong>
-                <strong class="text-xl uppercase variant-filled-primary p-2 rounded-xl">Some Store!</strong>
+                <a href="/" class="text-xl variant-filled-primary p-2 rounded-xl uppercase">Some Store</a>
             </svelte:fragment>
 
             <svelte:fragment slot="trail">
-                <SomeThemeSelector />
+                <ThemeSelector />
                 <LightSwitch />
                 <a
-                class="btn btn-sm variant-ghost-primary"
-                href="{$apiUrl}/docs"
-                target="_blank"
-                rel="noreferrer"
+                        class="btn btn-sm variant-ghost-primary"
+                        href="{$apiUrl}/docs"
+                        target="_blank"
+                        rel="noreferrer"
                 >API Docs</a>
                 <a
-                class="btn btn-sm variant-ghost-surface"
-                href="https://github.com/Yrrrrrf/some_store"
-                target="_blank"
-                rel="noreferrer"
+                        class="btn btn-sm variant-ghost-surface"
+                        href="https://github.com/Yrrrrrf/some_store"
+                        target="_blank"
+                        rel="noreferrer"
                 >GitHub</a>
             </svelte:fragment>
         </AppBar>

@@ -2,7 +2,7 @@
     import { createEventDispatcher, onMount } from 'svelte';
     import { fade, slide } from 'svelte/transition';
     import { Trash2, Edit2, Image, X } from 'lucide-svelte';
-    import { tooltip } from '$lib/tooltip';
+    import { tooltip } from '$lib/utils/tooltip';
 
     export let columns: string[];
     export let data: any[];

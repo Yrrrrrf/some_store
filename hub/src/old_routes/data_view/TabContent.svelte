@@ -1,7 +1,7 @@
 <script lang="ts">
     import { fade, fly } from 'svelte/transition';
-    import { snakeToCamelWithSpaces, fetchTableRows, fetchViewRows, fetchColumns } from '../../utils';
-    import { api_url, current_view, current_table } from '../../utils';
+    import { snakeToCamelWithSpaces, fetchTableRows, fetchViewRows, fetchColumns } from '$lib/utils/utils';
+    import { api_url, current_view, current_table } from '$lib/utils/utils';
     import { exportDataToPDF } from '$lib/utils/export_pdf';
 
     import SomeSearchBar from './SomeSearchBar.svelte';

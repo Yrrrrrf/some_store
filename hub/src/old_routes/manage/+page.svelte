@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { fetchTables, api_url } from '../../utils';
+    import { fetchTables, api_url } from '$lib/utils/utils';
     import TableManager from './TableManager.svelte';
 
     let tables: string[] = [];

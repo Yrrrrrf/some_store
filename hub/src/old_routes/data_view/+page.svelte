@@ -2,8 +2,8 @@
     import { Tab, TabGroup, ProgressRadial, LightSwitch } from "@skeletonlabs/skeleton";
     import { fade } from 'svelte/transition';
     import TabContent from './TabContent.svelte';
-    import { api_url, current_view, current_schema, current_table, current_tab } from '../../utils';
-    import { snakeToCamelWithSpaces, fetchTables, fetchViews } from '../../utils';
+    import { api_url, current_view, current_schema, current_table, current_tab } from '$lib/utils/utils';
+    import { snakeToCamelWithSpaces, fetchTables, fetchViews } from '$lib/utils/utils';
     import { onMount } from "svelte";
 
     let apiUrl: string = '';

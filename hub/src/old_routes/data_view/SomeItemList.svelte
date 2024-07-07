@@ -4,8 +4,8 @@
         Database, FileCog, FileText, FolderOpen, Gauge
     } from 'lucide-svelte';
     import { fly } from 'svelte/transition';
-    import { snakeToCamelWithSpaces } from '../../utils';
-    import { tooltip } from '$lib/tooltip';
+    import { snakeToCamelWithSpaces } from '$lib/utils/utils';
+    import { tooltip } from '$lib/utils/tooltip';
 
     export let viewMode: 'grid' | 'list';
     export let filteredItems: string[];
