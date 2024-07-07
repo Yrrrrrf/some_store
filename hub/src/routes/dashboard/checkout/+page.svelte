@@ -3,93 +3,64 @@
     import { apiClient } from '$lib/utils/api';
     import { current_user_id } from '$lib/stores/app';
     import { ProgressRadial } from '@skeletonlabs/skeleton';
-    import { exportOrderToPDF } from '$lib/utils/pdfExport';
-    import { ShoppingCart} from "lucide-svelte";
-
-    interface CartItem {
-        id: number;
-        customer_id: number;
-        product_id: number;
-        quantity: number;
-    }
-
-    interface Product {
-        id: number;
-        description: string;
-        unit_price: number;
-        image_url: string;
-    }
+    import { ShoppingCart } from 'lucide-svelte';
+    import CartSummary from '$lib/components/store/CartSummary.svelte';
+    import CheckoutForm from '$lib/components/store/CheckoutForm.svelte';
+    import { fetchCartItems, fetchProductDetails } from '$lib/utils/cartUtils';
+    import type { CartItem, Product } from '$lib/types';
 
     let cartItems: CartItem[] = [];
     let productDetails: Map<number, Product> = new Map();
     let isLoading = true;
     let error: string | null = null;
-    let total = 0;
 
-    let address = '123 Main St, Anytown, USA'; // Example address
-    const paymentMethods = ['Credit Card', 'PayPal', 'Bank Transfer'];
-    let selectedPaymentMethod = paymentMethods[0];
+    $: total = cartItems.reduce((sum, item) => {
+        const product = productDetails.get(item.product_id);
+        return sum + (product ? item.quantity * product.unit_price : 0);
+    }, 0);
 
-    $: {
-        if (cartItems && productDetails.size > 0) {
-            total = cartItems.reduce((sum, item) => {
-                const product = productDetails.get(item.product_id);
-                return sum + (product ? item.quantity * product.unit_price : 0);
-            }, 0);
-        }
-    }
-
-    async function fetchProductDetails() {
-        const productIds = [...new Set(cartItems.map(item => item.product_id))];
-        for (const productId of productIds) {
-            if (!productDetails.has(productId)) {
-                try {
-                    const [product] = await apiClient.fetchRows<Product>('product', { id: productId.toString() });
-                    if (product) {
-                        productDetails.set(productId, product);
-                    }
-                } catch (e) {
-                    console.error(`Error fetching product details for ID ${productId}:`, e);
-                }
+    async function handleUpdateQuantity(item: CartItem, change: number) {
+        const newQuantity = item.quantity + change;
+        if (newQuantity > 0) {
+            try {
+                await apiClient.updateRecord('cart', 'id', item.id, { quantity: newQuantity });
+                item.quantity = newQuantity;
+                cartItems = [...cartItems];
+            } catch (e) {
+                console.error('Error updating quantity:', e);
+                error = 'Failed to update quantity';
             }
+        } else {
+            handleRemoveItem(item);
         }
-        productDetails = new Map(productDetails); // Trigger reactivity
     }
 
-    async function fetchCartItems() {
-        isLoading = true;
-        error = null;
+    async function handleRemoveItem(item: CartItem) {
         try {
-            const response = await apiClient.fetchRows<CartItem>('cart', { customer_id: $current_user_id.toString() });
-            cartItems = response;
-            await fetchProductDetails();
+            await apiClient.deleteRecord('cart', 'id', item.id);
+            cartItems = cartItems.filter(i => i.id !== item.id);
         } catch (e) {
-            console.error('Error fetching cart items:', e);
-            error = 'Failed to load cart items';
+            console.error('Error removing item:', e);
+            error = 'Failed to remove item';
+        }
+    }
+
+    function handleCheckout(event: CustomEvent) {
+        const orderData = event.detail;
+        console.log('Order placed:', orderData);
+        // Implement order processing logic here
+    }
+
+    onMount(async () => {
+        try {
+            cartItems = await fetchCartItems($current_user_id);
+            productDetails = await fetchProductDetails(cartItems);
+        } catch (e) {
+            console.error('Error fetching data:', e);
+            error = 'Failed to load checkout data';
         } finally {
             isLoading = false;
         }
-    }
-
-    function handleDownloadPDF() {
-        const orderData = {
-            cartItems: cartItems.map(item => ({
-                product: productDetails.get(item.product_id),
-                quantity: item.quantity
-            })),
-            total,
-            address,
-            paymentMethod: selectedPaymentMethod,
-            orderDate: new Date().toISOString(),
-            orderId: `ORD-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
-        };
-        exportOrderToPDF(orderData).then(pdfUrl => {
-            window.open(pdfUrl, '_blank');
-        });
-    }
-
-    onMount(() => {
-        fetchCartItems();
     });
 </script>
 
@@ -110,34 +81,18 @@
     {:else if cartItems.length === 0}
         <p class="p-4 text-center">Your cart is empty</p>
     {:else}
-        <ul class="divide-y divide-gray-200">
-            {#each cartItems as item (item.id)}
-                {@const product = productDetails.get(item.product_id)}
-                {#if product}
-                    <li class="py-4 flex items-center justify-between" in:fade={{ duration: 300 }} out:fly={{ x: -50, duration: 300 }}>
-                        <div class="flex items-center space-x-4">
-                            <img src={product.image_url} alt={product.description} class="w-16 h-16 object-cover rounded"/>
-                            <div>
-                                <h4 class="font-semibold">{product.description}</h4>
-                                <p class="text-sm text-gray-500">${product.unit_price.toFixed(2)} each</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="font-semibold">{item.quantity}</span>
-                            <span class="font-semibold">${(item.quantity * product.unit_price).toFixed(2)}</span>
-                        </div>
-                    </li>
-                {/if}
-            {/each}
-        </ul>
-        <div class="mt-4 p-4 bg-surface-100-800-token rounded-lg">
-            <div class="flex justify-between items-center">
-                <span class="text-lg font-semibold">Total:</span>
-                <span class="text-xl font-bold">${total.toFixed(2)}</span>
-            </div>
-        </div>
-        <button class="btn variant-filled-primary w-full mt-4" on:click={handleDownloadPDF}>
-            Download Order PDF
-        </button>
+        <CartSummary
+                {cartItems}
+                {productDetails}
+                editable={true}
+                onUpdateQuantity={handleUpdateQuantity}
+                onRemoveItem={handleRemoveItem}
+        />
+        <CheckoutForm
+                {total}
+                {cartItems}
+                {productDetails}
+                on:checkout={handleCheckout}
+        />
     {/if}
 </div>

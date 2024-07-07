@@ -93,7 +93,7 @@
         </div>
     </div>
 
-    <Cart {userId} />
+    <Cart />
 
     <div class="flex justify-end mb-4">
         <TabGroup>
