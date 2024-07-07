@@ -8,8 +8,8 @@
     initializeFloatingUI();  // Initialize floating UI elements (popups, tooltips, etc.)
     initializeHighlightJS();  // Initialize Highlight.js for code blocks
 
-    // use the api_url var declared on the $lib/utils/app_stores.ts file
-    import { api_url } from "$lib/utils/app_stores";
+    // use the api_url var declared on the $lib/utils/app.ts file
+    import { api_url } from "$lib/stores/app";
     import {goto} from "$app/navigation";
 
     $: apiUrl = api_url;
@@ -35,16 +35,16 @@
                 <ThemeSelector />
                 <LightSwitch />
                 <a
-                        class="btn btn-sm variant-ghost-primary"
-                        href="{$apiUrl}/docs"
-                        target="_blank"
-                        rel="noreferrer"
+                    class="btn btn-sm variant-ghost-primary"
+                    href="{$apiUrl}/docs"
+                    target="_blank"
+                    rel="noreferrer"
                 >API Docs</a>
                 <a
-                        class="btn btn-sm variant-ghost-surface"
-                        href="https://github.com/Yrrrrrf/some_store"
-                        target="_blank"
-                        rel="noreferrer"
+                    class="btn btn-sm variant-ghost-surface"
+                    href="https://github.com/Yrrrrrf/some_store"
+                    target="_blank"
+                    rel="noreferrer"
                 >GitHub</a>
             </svelte:fragment>
         </AppBar>

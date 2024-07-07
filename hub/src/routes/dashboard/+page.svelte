@@ -1,13 +1,13 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { ShoppingCart, Grid, List } from 'lucide-svelte';
+    import { Grid, List } from 'lucide-svelte';
     import ProductCard from './ProductCard.svelte';
+    import UserCard from './UserCard.svelte';
+    import Cart from './Cart.svelte';
 
     import {
         productStore,
         categoryStore,
-        cartItemCount,
-        cartTotal,
         fetchProducts,
         fetchCategories,
         searchProducts,
@@ -16,10 +16,10 @@
         type Product,
         type Category
     } from '$lib/stores/storeManager';
-    import { Avatar, InputChip, ListBox, ListBoxItem, Tab, TabGroup } from "@skeletonlabs/skeleton";
+    import { Avatar, InputChip, Tab, TabGroup } from "@skeletonlabs/skeleton";
 
     let isLoading = true;
-    let searchTerms: string[] = []; // Change this to an array
+    let searchTerms: string[] = [];
     let sortBy: keyof Product = 'description';
     let sortOrder: 'asc' | 'desc' = 'asc';
     let selectedCategory = '';
@@ -28,8 +28,10 @@
     let products: Product[] = [];
     let categories: Category[] = [];
 
+    const userId = 1; // Set the main Customer as the one with id = 1 for testing
+
     $: filteredAndSortedProducts = sortProducts(
-        searchProducts(products, searchTerms.join(' '), selectedCategory), // Join search terms
+        searchProducts(products, searchTerms.join(' '), selectedCategory),
         sortBy,
         sortOrder
     );
@@ -42,7 +44,6 @@
             await Promise.all([fetchProducts(), fetchCategories()]);
         } catch (error) {
             console.error('Failed to fetch data:', error);
-            // Handle error (e.g., show error message to user)
         } finally {
             isLoading = false;
         }
@@ -63,35 +64,36 @@
 </script>
 
 <main class="container mx-auto p-4 space-y-8">
-    <ShoppingCart />
-    {#if $cartItemCount > 0}
-        <span class="badge-icon variant-filled-primary absolute -top-2 -right-2">{$cartItemCount}</span>
-    {/if}
-
-    <h1 class="h1">Product Dashboard</h1>
-
-    <div class="card p-4 variant-soft-surface">
-        <header class="card-header">
-            <h2 class="h3">Filters and Sorting</h2>
-        </header>
-        <section class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <InputChip bind:value={searchTerms} name="search" placeholder="Search products..." />
-            <select bind:value={selectedCategory} class="select select-bordered w-full max-w-xs">
-                <option value="">All Categories</option>
-                {#each categories as category}
-                    <option value={category.id}>{category.name}</option>
-                {/each}
-            </select>
-            <div class="flex gap-2">
-                <button on:click={() => handleSort('description')} class="btn variant-soft">
-                    Name {sortBy === 'description' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
-                </button>
-                <button on:click={() => handleSort('unit_price')} class="btn variant-soft">
-                    Price {sortBy === 'unit_price' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
-                </button>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <UserCard {userId} />
+        <div class="md:col-span-2">
+            <h1 class="h1 mb-4">Product Dashboard</h1>
+            <div class="card p-4 variant-soft-surface">
+                <header class="card-header">
+                    <h2 class="h3">Filters and Sorting</h2>
+                </header>
+                <section class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <InputChip bind:value={searchTerms} name="search" placeholder="Search products..." />
+                    <select bind:value={selectedCategory} class="select select-bordered w-full max-w-xs">
+                        <option value="">All Categories</option>
+                        {#each categories as category}
+                            <option value={category.id}>{category.name}</option>
+                        {/each}
+                    </select>
+                    <div class="flex gap-2">
+                        <button on:click={() => handleSort('description')} class="btn variant-soft">
+                            Name {sortBy === 'description' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                        </button>
+                        <button on:click={() => handleSort('unit_price')} class="btn variant-soft">
+                            Price {sortBy === 'unit_price' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                        </button>
+                    </div>
+                </section>
             </div>
-        </section>
+        </div>
     </div>
+
+    <Cart {userId} />
 
     <div class="flex justify-end mb-4">
         <TabGroup>

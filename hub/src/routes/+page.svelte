@@ -1,6 +1,7 @@
 <script lang="ts">
-    import { AppBar, AppShell, Avatar } from '@skeletonlabs/skeleton';
+    import { AppShell } from '@skeletonlabs/skeleton';
     import { Zap, ShoppingCart, Database, BarChart } from 'lucide-svelte';
+    import CustomerSelector from './CustomerSelector.svelte';
 
     const features = [
         { icon: ShoppingCart, title: 'Product Management', description: 'Easily manage your product catalog with intuitive tools.' },
@@ -14,6 +15,8 @@
         <h1 class="h1">Welcome to Some Store</h1>
         <p class="text-xl">Your one-stop solution for store management</p>
     </header>
+
+    <CustomerSelector />
 
     <section class="card p-4 variant-ghost-surface">
         <header class="card-header">
