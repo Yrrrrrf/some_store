@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 # ? Local imports
 from src.api.routes import *
+from src.api.functions_routes import function_router
 from src.config import Config
 
 
@@ -66,14 +67,19 @@ async def upload_image(product_code: str, file: UploadFile = File(...)):
 
 
 
-# * Create routes
+
+
+# * Add the routers to the application
+app.include_router(function_router, prefix="/fn", tags=["Functions"])  # * function routes for the application (get_product_inventory, convert_cart_to_sale, etc.)
+
+
 # app.include_router(router)      # * main router to test the application
 app.include_router(home)        # * main routes for the application (home, about, contact, help, etc.)
 # app.include_router(auth)        # * authentication routes (login, logout, etc.)
 app.include_router(views)       # * views for the application (for each schema on the database)
 app.include_router(basic_dt)    # * data table (GET columns & all resources)
 app.include_router(crud_attr)   # * CRUD operations for attributes
-
+    
 
 # * Startup event
 print("\n\033[92m" + f"Startup completed successfully!\n\n")

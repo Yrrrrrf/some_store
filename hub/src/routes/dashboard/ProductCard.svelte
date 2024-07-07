@@ -38,7 +38,7 @@
             };
             await apiClient.createRecord('cart', cartItem);
             dispatch('add-to-cart', product);
-            triggerCartUpdate(); // Trigger cart update
+            triggerCartUpdate(); // This line ensures the UserCard is notified
             toastMessage = 'Product added to cart successfully!';
         } catch (error) {
             console.error('Error adding product to cart:', error);

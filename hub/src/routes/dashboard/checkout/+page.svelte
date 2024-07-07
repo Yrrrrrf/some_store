@@ -9,16 +9,39 @@
     import { fetchCartItems, fetchProductDetails } from '$lib/utils/cartUtils';
     import type { CartItem, Product } from '$lib/types';
 
+    /**
+     * Represents the items in the user's cart.
+     */
     let cartItems: CartItem[] = [];
+
+    /**
+     * Stores details of products in the cart.
+     */
     let productDetails: Map<number, Product> = new Map();
+
+    /**
+     * Indicates whether data is currently being loaded.
+     */
     let isLoading = true;
+
+    /**
+     * Stores any error messages encountered during data fetching or processing.
+     */
     let error: string | null = null;
 
+    /**
+     * Calculates the total price of items in the cart.
+     */
     $: total = cartItems.reduce((sum, item) => {
         const product = productDetails.get(item.product_id);
         return sum + (product ? item.quantity * product.unit_price : 0);
     }, 0);
 
+    /**
+     * Handles updating the quantity of an item in the cart.
+     * @param item - The cart item to update.
+     * @param change - The amount to change the quantity by.
+     */
     async function handleUpdateQuantity(item: CartItem, change: number) {
         const newQuantity = item.quantity + change;
         if (newQuantity > 0) {
@@ -35,6 +58,10 @@
         }
     }
 
+    /**
+     * Handles removing an item from the cart.
+     * @param item - The cart item to remove.
+     */
     async function handleRemoveItem(item: CartItem) {
         try {
             await apiClient.deleteRecord('cart', 'id', item.id);
@@ -43,12 +70,6 @@
             console.error('Error removing item:', e);
             error = 'Failed to remove item';
         }
-    }
-
-    function handleCheckout(event: CustomEvent) {
-        const orderData = event.detail;
-        console.log('Order placed:', orderData);
-        // Implement order processing logic here
     }
 
     onMount(async () => {
@@ -64,35 +85,63 @@
     });
 </script>
 
-<div class="card p-4 variant-ghost-surface">
-    <header class="card-header flex justify-between items-center">
-        <h3 class="h3 flex items-center gap-2">
-            <ShoppingCart size={24} />
+<div class="container mx-auto p-4">
+    <header class="mb-8">
+        <h1 class="h1 flex items-center gap-2">
+            <ShoppingCart size={48} />
             Checkout
-        </h3>
+        </h1>
     </header>
 
     {#if isLoading}
-        <div class="flex justify-center items-center h-32">
+        <div class="flex justify-center items-center h-64">
             <ProgressRadial />
         </div>
     {:else if error}
-        <p class="text-error-500 p-4">{error}</p>
+        <p class="text-error-500 p-4 text-center">{error}</p>
     {:else if cartItems.length === 0}
-        <p class="p-4 text-center">Your cart is empty</p>
+        <p class="p-4 text-center text-xl">Your cart is empty</p>
     {:else}
-        <CartSummary
-                {cartItems}
-                {productDetails}
-                editable={true}
-                onUpdateQuantity={handleUpdateQuantity}
-                onRemoveItem={handleRemoveItem}
-        />
-        <CheckoutForm
-                {total}
-                {cartItems}
-                {productDetails}
-                on:checkout={handleCheckout}
-        />
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="card variant-soft-surface">
+                <h2 class="h3 p-4 border-b border-surface-300">Order Summary</h2>
+                <div class="cart-summary-container">
+                    <CartSummary
+                            {cartItems}
+                            {productDetails}
+                            editable={true}
+                            onUpdateQuantity={handleUpdateQuantity}
+                            onRemoveItem={handleRemoveItem}
+                    />
+                </div>
+                <div class="p-4 border-t border-surface-300">
+                    <div class="flex justify-between items-center">
+                        <span class="text-lg font-semibold">Total:</span>
+                        <span class="text-xl font-bold">${total.toFixed(2)}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card variant-soft-surface">
+                <h2 class="h3 p-4 border-b border-surface-300">Checkout Details</h2>
+                <div class="checkout-form-container">
+                    <CheckoutForm
+                            {total}
+                            {cartItems}
+                            {productDetails}
+                    />
+                </div>
+            </div>
+        </div>
     {/if}
 </div>
+
+<style>
+    .container {
+        max-width: 1200px;
+    }
+    .cart-summary-container, .checkout-form-container {
+        max-height: calc(80vh - 200px);
+        overflow-y: auto;
+        padding: 1rem;
+    }
+</style>

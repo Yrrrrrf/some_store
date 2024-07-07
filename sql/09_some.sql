@@ -1,70 +1,21 @@
--- -- 1. Add Indexes
--- -- Improve query performance by adding indexes to frequently searched columns
--- CREATE INDEX idx_product_code ON store.product(code);
--- CREATE INDEX idx_sale_date ON store.sale(sale_date);
--- CREATE INDEX idx_purchase_date ON store.purchase(purchase_date);
---
---
--- -- 5. Add Full-Text Search
--- -- Improve search functionality for product descriptions
--- ALTER TABLE store.product ADD COLUMN search_vector tsvector;
--- CREATE INDEX product_search_idx ON store.product USING GIN (search_vector);
---
--- UPDATE store.product SET search_vector = to_tsvector('english', description);
---
--- CREATE TRIGGER product_search_update
---     BEFORE INSERT OR UPDATE ON store.product
---     FOR EACH ROW
---     EXECUTE FUNCTION tsvector_update_trigger(search_vector, 'pg_catalog.english', description);
---
--- -- 6. Implement Partitioning
--- -- For large tables like 'sale', consider partitioning by date
--- -- This example assumes you're using PostgreSQL 10 or later
--- CREATE TABLE store.sale_partitioned (
---     id SERIAL,
---     customer_id INT NOT NULL,
---     vendor_id INT NOT NULL,
---     sale_date DATE NOT NULL,
---     reference VARCHAR(255) NOT NULL UNIQUE,
---     FOREIGN KEY (customer_id) REFERENCES store.customer(id),
---     FOREIGN KEY (vendor_id) REFERENCES store.vendor(id)
--- ) PARTITION BY RANGE (sale_date);
---
--- CREATE TABLE store.sale_y2024m01 PARTITION OF store.sale_partitioned
---     FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
---
--- CREATE TABLE store.sale_y2024m02 PARTITION OF store.sale_partitioned
---     FOR VALUES FROM ('2024-02-01') TO ('2024-03-01');
---
--- -- Continue creating partitions for each month
---
--- -- 7. Implement Row-Level Security
--- -- Add fine-grained access control
--- ALTER TABLE store.sale ENABLE ROW LEVEL SECURITY;
---
--- CREATE POLICY sale_access_policy ON store.sale
---     USING (vendor_id = current_setting('app.current_vendor_id')::integer);
---
 
--- * 8. Add Computed Columns
--- * Calculate values on the fly
-ALTER TABLE store.sale_details ADD COLUMN total_price DECIMAL(10, 2)
-    GENERATED ALWAYS AS (quantity * unit_price) STORED;
+-- -----------------------------------------------------------------------------
+-- Ideas for Future Database Improvements:
+-- -----------------------------------------------------------------------------
 
--- -- 9. Implement Database Roles
--- CREATE ROLE readonly;
--- GRANT USAGE ON SCHEMA store TO readonly;
--- GRANT SELECT ON ALL TABLES IN SCHEMA store TO readonly;
---
--- CREATE ROLE dataentry;
--- GRANT USAGE ON SCHEMA store TO dataentry;
--- GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA store TO dataentry;
---
--- -- 10. Set up Logging
--- -- Enable query logging for performance tuning
--- ALTER SYSTEM SET log_statement = 'all';
--- ALTER SYSTEM SET log_min_duration_statement = 1000;  -- Log queries that take more than 1 second
--- SELECT pg_reload_conf();
---
--- -- Remember to implement these improvements cautiously in a production environment,
--- -- preferably testing each change thoroughly in a staging environment first.
+-- 1. Add inventory tracking:
+--    Implement triggers to update inventory on purchases and sales.
+
+-- 5. Add payment tracking:
+--    Create a payments table to track multiple payments for a single sale.
+--    Include payment methods (cash, credit card, etc.) and payment status.
+
+-- 6. Implement a review system:
+--    Add a reviews table linked to products and customers.
+--    This would allow tracking of customer feedback on products.
+
+-- 15. Consider implementing partitioning for large tables like sale_details or purchase_details.
+
+-- 16. Implement a view that shows product availability (in stock, out of stock, low stock).
+
+-- 17. Consider implementing full-text search capabilities for product descriptions.

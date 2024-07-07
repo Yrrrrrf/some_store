@@ -3,8 +3,7 @@
     import { Grid, List } from 'lucide-svelte';
     import ProductCard from './ProductCard.svelte';
     import UserCard from './UserCard.svelte';
-    import Cart from './Cart.svelte';
-
+    import { Avatar, InputChip, Tab, TabGroup } from "@skeletonlabs/skeleton";
     import {
         productStore,
         categoryStore,
@@ -16,8 +15,8 @@
         type Product,
         type Category
     } from '$lib/stores/storeManager';
-    import { Avatar, InputChip, Tab, TabGroup } from "@skeletonlabs/skeleton";
 
+    // State variables
     let isLoading = true;
     let searchTerms: string[] = [];
     let sortBy: keyof Product = 'description';
@@ -28,18 +27,23 @@
     let products: Product[] = [];
     let categories: Category[] = [];
 
-    const userId = 1; // Set the main Customer as the one with id = 1 for testing
-
+    /**
+     * Filters and sorts products based on current search terms, category, and sorting criteria.
+     */
     $: filteredAndSortedProducts = sortProducts(
         searchProducts(products, searchTerms.join(' '), selectedCategory),
         sortBy,
         sortOrder
     );
 
+    // Subscribe to stores
     productStore.subscribe(value => products = value);
     categoryStore.subscribe(value => categories = value);
 
-    onMount(async () => {
+    /**
+     * Initializes the dashboard by fetching necessary data.
+     */
+    async function initializeDashboard() {
         try {
             await Promise.all([fetchProducts(), fetchCategories()]);
         } catch (error) {
@@ -47,8 +51,12 @@
         } finally {
             isLoading = false;
         }
-    });
+    }
 
+    /**
+     * Handles sorting of products.
+     * @param field - The field to sort by.
+     */
     function handleSort(field: keyof Product) {
         if (sortBy === field) {
             sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
@@ -58,14 +66,20 @@
         }
     }
 
+    /**
+     * Handles adding a product to the cart.
+     * @param product - The product to add to the cart.
+     */
     function handleAddToCart(product: Product) {
         addToCart(product);
     }
+
+    onMount(initializeDashboard);
 </script>
 
 <main class="container mx-auto p-4 space-y-8">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <UserCard {userId} />
+        <UserCard />
         <div class="md:col-span-2">
             <h1 class="h1 mb-4">Product Dashboard</h1>
             <div class="card p-4 variant-soft-surface">
@@ -93,8 +107,6 @@
         </div>
     </div>
 
-    <Cart />
-
     <div class="flex justify-end mb-4">
         <TabGroup>
             <Tab bind:group={viewMode} name="viewMode" value="grid"><Grid /></Tab>
@@ -111,7 +123,7 @@
     {:else}
         <div class={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' : 'space-y-4'}>
             {#each filteredAndSortedProducts as product (product.id)}
-                <ProductCard {product} {viewMode} on:add-to-cart={() => addToCart(product)} />
+                <ProductCard {product} {viewMode} on:add-to-cart={() => handleAddToCart(product)} />
             {/each}
         </div>
     {/if}

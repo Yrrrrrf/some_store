@@ -34,6 +34,7 @@
     "@floating-ui/dom": "1.6.5",
     "@neodrag/svelte": "^2.0.6",
     "@vincjo/datatables": "^1.14.10",
+    "chart.js": "^4.4.3",
     "highlight.js": "11.9.0",
     "jquery": "^3.7.1",
     "jspdf": "^2.5.1",

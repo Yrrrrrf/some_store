@@ -1,7 +1,7 @@
 -- File: 02_tables.sql
 -- Description: This file defines the complete updated table structure for the store database.
 --              It includes tables for customers, vendors, products, categories, providers,
---              purchases, sales, carts, and their respective details.
+--              purchases, sales, carts, shipping addresses, and their respective details.
 
 -- -----------------------------------------------------------------------------
 -- Table: store.customer
@@ -9,8 +9,24 @@
 -- -----------------------------------------------------------------------------
 DROP TABLE IF EXISTS store.customer CASCADE;
 CREATE TABLE store.customer (
-    id SERIAL PRIMARY KEY,              -- Unique identifier for each customer (auto-incremented)
-    name VARCHAR(100) NOT NULL          -- Full name of the customer
+    id SERIAL PRIMARY KEY,              -- Unique identifier for each customer
+    name VARCHAR(100) NOT NULL,         -- Full name of the customer
+    email VARCHAR(255) UNIQUE NOT NULL, -- Customer's email address (used for login)
+    phone VARCHAR(20)                   -- Customer's phone number (optional)
+);
+
+-- -----------------------------------------------------------------------------
+-- Table: store.shipping_address
+-- Description: Stores shipping addresses for customers
+-- -----------------------------------------------------------------------------
+DROP TABLE IF EXISTS store.shipping_address CASCADE;
+CREATE TABLE store.shipping_address (
+    id SERIAL PRIMARY KEY,              -- Unique identifier for each shipping address
+    customer_id INT NOT NULL,           -- Reference to the customer
+    address_line1 VARCHAR(255) NOT NULL,-- First line of the shipping address
+    city VARCHAR(100) NOT NULL,         -- City of the shipping address
+    postal_code VARCHAR(20) NOT NULL,   -- Postal code of the shipping address
+    FOREIGN KEY (customer_id) REFERENCES store.customer(id)
 );
 
 -- -----------------------------------------------------------------------------
@@ -19,7 +35,7 @@ CREATE TABLE store.customer (
 -- -----------------------------------------------------------------------------
 DROP TABLE IF EXISTS store.vendor CASCADE;
 CREATE TABLE store.vendor (
-    id SERIAL PRIMARY KEY,              -- Unique identifier for each vendor (auto-incremented)
+    id SERIAL PRIMARY KEY,              -- Unique identifier for each vendor
     name VARCHAR(100) NOT NULL          -- Full name of the vendor
 );
 
@@ -30,7 +46,7 @@ CREATE TABLE store.vendor (
 DROP TABLE IF EXISTS store.category CASCADE;
 CREATE TABLE store.category (
     id SERIAL PRIMARY KEY,              -- Unique identifier for each category
-    name VARCHAR(100) NOT NULL         -- Name of the category
+    name VARCHAR(100) NOT NULL          -- Name of the category
 );
 
 -- -----------------------------------------------------------------------------
@@ -39,12 +55,12 @@ CREATE TABLE store.category (
 -- -----------------------------------------------------------------------------
 DROP TABLE IF EXISTS store.product CASCADE;
 CREATE TABLE store.product (
-    id SERIAL PRIMARY KEY,              -- Unique identifier for each product (auto-incremented)
-    code VARCHAR(50) UNIQUE NOT NULL,   -- Unique product code for easy identification
-    description VARCHAR(255) NOT NULL,  -- Detailed description of the product
-    unit_price DECIMAL(10, 2) NOT NULL, -- Price per unit of the product
-    image_url VARCHAR(255),             -- URL of the product image
+    id SERIAL PRIMARY KEY,              -- Unique identifier for each product
+    code VARCHAR(50) UNIQUE NOT NULL,   -- Product code (SKU)
+    description VARCHAR(255) NOT NULL,  -- Description of the product
+    unit_price DECIMAL(10, 2) NOT NULL, -- Current price per unit
     category_id INT NOT NULL,           -- Reference to the product category
+    image_url VARCHAR(255),             -- URL of the product image
     FOREIGN KEY (category_id) REFERENCES store.category(id),
     CONSTRAINT check_positive_price CHECK (unit_price > 0)
 );
@@ -73,8 +89,8 @@ EXECUTE FUNCTION store.generate_image_url();
 -- -----------------------------------------------------------------------------
 DROP TABLE IF EXISTS store.provider CASCADE;
 CREATE TABLE store.provider (
-    id SERIAL PRIMARY KEY,              -- Unique identifier for each provider (auto-incremented)
-    name VARCHAR(100) NOT NULL          -- Name of the provider company
+    id SERIAL PRIMARY KEY,              -- Unique identifier for each provider
+    name VARCHAR(100) NOT NULL          -- Name of the provider
 );
 
 -- -----------------------------------------------------------------------------
@@ -83,11 +99,10 @@ CREATE TABLE store.provider (
 -- -----------------------------------------------------------------------------
 DROP TABLE IF EXISTS store.purchase CASCADE;
 CREATE TABLE store.purchase (
-    id SERIAL PRIMARY KEY,              -- Unique identifier for each purchase (auto-incremented)
-    provider_id INT NOT NULL,           -- Reference to the provider who supplied the products
-    purchase_date DATE NOT NULL,        -- Date when the purchase was made
-    total_amount DECIMAL(10, 2) NOT NULL, -- Total cost of the purchase
-    FOREIGN KEY (provider_id) REFERENCES store.provider(id)  -- Ensures data integrity with provider table
+    id SERIAL PRIMARY KEY,              -- Unique identifier for each purchase
+    provider_id INT NOT NULL,           -- Reference to the provider
+    purchase_date DATE NOT NULL,        -- Date of the purchase
+    FOREIGN KEY (provider_id) REFERENCES store.provider(id)
 );
 
 -- -----------------------------------------------------------------------------
@@ -96,13 +111,13 @@ CREATE TABLE store.purchase (
 -- -----------------------------------------------------------------------------
 DROP TABLE IF EXISTS store.purchase_details CASCADE;
 CREATE TABLE store.purchase_details (
-    id SERIAL PRIMARY KEY,              -- Unique identifier for each purchase detail (auto-incremented)
-    purchase_id INT NOT NULL,           -- Reference to the associated purchase
-    product_id INT NOT NULL,            -- Reference to the product purchased
-    quantity INT NOT NULL,              -- Number of units purchased
+    id SERIAL PRIMARY KEY,              -- Unique identifier for each purchase detail
+    purchase_id INT NOT NULL,           -- Reference to the purchase
+    product_id INT NOT NULL,            -- Reference to the product
+    quantity INT NOT NULL,              -- Quantity of the product purchased
     unit_price DECIMAL(10, 2) NOT NULL, -- Price per unit at the time of purchase
-    FOREIGN KEY (purchase_id) REFERENCES store.purchase(id),  -- Ensures data integrity with purchase table
-    FOREIGN KEY (product_id) REFERENCES store.product(id)     -- Ensures data integrity with product table
+    FOREIGN KEY (purchase_id) REFERENCES store.purchase(id),
+    FOREIGN KEY (product_id) REFERENCES store.product(id)
 );
 
 -- -----------------------------------------------------------------------------
@@ -111,14 +126,15 @@ CREATE TABLE store.purchase_details (
 -- -----------------------------------------------------------------------------
 DROP TABLE IF EXISTS store.sale CASCADE;
 CREATE TABLE store.sale (
-    id SERIAL PRIMARY KEY,
-    customer_id INT NOT NULL,
-    vendor_id INT NOT NULL,
-    sale_date DATE NOT NULL,
-    reference VARCHAR(255) NOT NULL UNIQUE,
-    total_amount DECIMAL(10, 2),
+    id SERIAL PRIMARY KEY,              -- Unique identifier for each sale
+    customer_id INT NOT NULL,           -- Reference to the customer
+    vendor_id INT NOT NULL,             -- Reference to the vendor
+    shipping_address_id INT NOT NULL,   -- Reference to the shipping address
+    sale_date DATE NOT NULL DEFAULT CURRENT_DATE, -- Date of the sale
+    reference VARCHAR(255) NOT NULL UNIQUE, -- Unique reference number for the sale
     FOREIGN KEY (customer_id) REFERENCES store.customer(id),
-    FOREIGN KEY (vendor_id) REFERENCES store.vendor(id)
+    FOREIGN KEY (vendor_id) REFERENCES store.vendor(id),
+    FOREIGN KEY (shipping_address_id) REFERENCES store.shipping_address(id)
 );
 
 -- Create a function to generate the sale reference
@@ -131,7 +147,7 @@ BEGIN
             CAST(NEW.customer_id AS VARCHAR),
             CAST(NEW.vendor_id AS VARCHAR),
             CAST(NEW.sale_date AS VARCHAR),
-            CAST(EXTRACT(EPOCH FROM NOW()) AS VARCHAR) -- Add current timestamp for uniqueness
+            CAST(EXTRACT(EPOCH FROM NOW()) AS VARCHAR)
         ));
     END IF;
     RETURN NEW;
@@ -150,39 +166,15 @@ EXECUTE FUNCTION store.generate_sale_reference();
 -- -----------------------------------------------------------------------------
 DROP TABLE IF EXISTS store.sale_details CASCADE;
 CREATE TABLE store.sale_details (
-    id SERIAL PRIMARY KEY,
-    sale_id INT NOT NULL,
-    product_id INT NOT NULL,
-    quantity INT NOT NULL,
-    unit_price DECIMAL(10, 2) NOT NULL,
+    id SERIAL PRIMARY KEY,              -- Unique identifier for each sale detail
+    sale_id INT NOT NULL,               -- Reference to the sale
+    product_id INT NOT NULL,            -- Reference to the product
+    quantity INT NOT NULL,              -- Quantity of the product sold
+    unit_price DECIMAL(10, 2) NOT NULL, -- Price per unit at the time of sale
     FOREIGN KEY (sale_id) REFERENCES store.sale(id),
     FOREIGN KEY (product_id) REFERENCES store.product(id),
     CONSTRAINT check_positive_quantity CHECK (quantity > 0)
 );
-
--- Create a function to automatically set the unit price
-CREATE OR REPLACE FUNCTION store.set_sale_detail_unit_price()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- Fetch the current unit price from the product table
-    SELECT unit_price INTO NEW.unit_price
-    FROM store.product
-    WHERE id = NEW.product_id;
-
-    -- If the product doesn't exist or has no price, raise an exception
-    IF NEW.unit_price IS NULL THEN
-        RAISE EXCEPTION 'No valid price found for product with ID %', NEW.product_id;
-    END IF;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Create a trigger to automatically set the unit price before insert
-CREATE TRIGGER tr_set_sale_detail_unit_price
-BEFORE INSERT ON store.sale_details
-FOR EACH ROW
-EXECUTE FUNCTION store.set_sale_detail_unit_price();
 
 -- -----------------------------------------------------------------------------
 -- Table: store.cart
@@ -190,10 +182,10 @@ EXECUTE FUNCTION store.set_sale_detail_unit_price();
 -- -----------------------------------------------------------------------------
 DROP TABLE IF EXISTS store.cart CASCADE;
 CREATE TABLE store.cart (
-    id SERIAL PRIMARY KEY,
-    customer_id INT NOT NULL,
-    product_id INT NOT NULL,
-    quantity INT NOT NULL,
+    id SERIAL PRIMARY KEY,              -- Unique identifier for each cart item
+    customer_id INT NOT NULL,           -- Reference to the customer
+    product_id INT NOT NULL,            -- Reference to the product
+    quantity INT NOT NULL,              -- Quantity of the product in the cart
     FOREIGN KEY (customer_id) REFERENCES store.customer(id),
     FOREIGN KEY (product_id) REFERENCES store.product(id),
     CONSTRAINT check_positive_quantity CHECK (quantity > 0),
@@ -209,12 +201,12 @@ BEGIN
         UPDATE store.cart
         SET quantity = quantity + NEW.quantity
         WHERE customer_id = NEW.customer_id AND product_id = NEW.product_id;
-        
+
         IF FOUND THEN
             RETURN NULL; -- Prevent the insertion of a new row
         END IF;
     END IF;
-    
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -225,124 +217,112 @@ BEFORE INSERT ON store.cart
 FOR EACH ROW EXECUTE FUNCTION store.update_cart();
 
 -- -----------------------------------------------------------------------------
--- Additional constraints and functions
+-- Function: store.get_purchase_total
+-- Description: Calculates the total amount of a purchase based on purchase_details
 -- -----------------------------------------------------------------------------
---
--- -- Create a function to update the purchase total amount
--- CREATE OR REPLACE FUNCTION store.update_purchase_total()
--- RETURNS TRIGGER AS $$
--- BEGIN
---     UPDATE store.purchase
---     SET total_amount = (
---         SELECT COALESCE(SUM(quantity * unit_price), 0)
---         FROM store.purchase_details
---         WHERE purchase_id = CASE
---             WHEN TG_OP = 'DELETE' THEN OLD.purchase_id
---             ELSE NEW.purchase_id
---         END
---     )
---     WHERE id = CASE
---         WHEN TG_OP = 'DELETE' THEN OLD.purchase_id
---         ELSE NEW.purchase_id
---     END;
---     RETURN NULL;
--- END;
--- $$ LANGUAGE plpgsql;
---
--- -- Create a trigger to update the purchase total amount
--- CREATE TRIGGER tr_update_purchase_total
--- AFTER INSERT OR UPDATE OR DELETE ON store.purchase_details
--- FOR EACH ROW EXECUTE FUNCTION store.update_purchase_total();
---
---
--- CREATE OR REPLACE FUNCTION store.update_sale_total()
--- RETURNS TRIGGER AS $$
--- BEGIN
---     UPDATE store.sale
---     SET total_amount = (
---         SELECT COALESCE(SUM(quantity * unit_price), 0)
---         FROM store.sale_details
---         WHERE sale_id = CASE
---             WHEN TG_OP = 'DELETE' THEN OLD.sale_id
---             ELSE NEW.sale_id
---         END
---     )
---     WHERE id = CASE
---         WHEN TG_OP = 'DELETE' THEN OLD.sale_id
---         ELSE NEW.sale_id
---     END;
---     RETURN NULL;
--- END;
--- $$ LANGUAGE plpgsql;
---
--- CREATE TRIGGER tr_update_sale_total
--- AFTER INSERT OR UPDATE OR DELETE ON store.sale_details
--- FOR EACH ROW EXECUTE FUNCTION store.update_sale_total();
+CREATE OR REPLACE FUNCTION store.get_purchase_total(p_purchase_id INT)
+RETURNS DECIMAL(10, 2) AS $$
+DECLARE
+    v_total DECIMAL(10, 2);
+BEGIN
+    SELECT COALESCE(SUM(quantity * unit_price), 0)
+    INTO v_total
+    FROM store.purchase_details
+    WHERE purchase_id = p_purchase_id;
 
+    RETURN v_total;
+END;
+$$ LANGUAGE plpgsql;
+
+-- -----------------------------------------------------------------------------
+-- Function: store.get_sale_total
+-- Description: Calculates the total amount of a sale based on sale_details
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION store.get_sale_total(p_sale_id INT)
+RETURNS DECIMAL(10, 2) AS $$
+DECLARE
+    v_total DECIMAL(10, 2);
+BEGIN
+    SELECT COALESCE(SUM(quantity * unit_price), 0)
+    INTO v_total
+    FROM store.sale_details
+    WHERE sale_id = p_sale_id;
+
+    RETURN v_total;
+END;
+$$ LANGUAGE plpgsql;
+
+-- -----------------------------------------------------------------------------
+-- Function: store.get_product_inventory
+-- Description: Calculates the current inventory of a product
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION store.get_product_inventory(p_product_id INT)
+RETURNS INT AS $$
+DECLARE
+    v_inventory INT;
+BEGIN
+    SELECT
+        COALESCE(SUM(CASE WHEN t.type = 'purchase' THEN t.quantity ELSE -t.quantity END), 0)
+    INTO v_inventory
+    FROM (
+        SELECT 'purchase' as type, product_id, quantity
+        FROM store.purchase_details
+        UNION ALL
+        SELECT 'sale' as type, product_id, quantity
+        FROM store.sale_details
+    ) t
+    WHERE t.product_id = p_product_id;
+
+    RETURN v_inventory;
+END;
+$$ LANGUAGE plpgsql;
+
+-- -----------------------------------------------------------------------------
+-- Function: store.convert_cart_to_sale
+-- Description: Converts a customer's cart to a sale
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION store.convert_cart_to_sale(
+    p_customer_id INT,
+    p_vendor_id INT,
+    p_shipping_address_id INT
+)
+RETURNS INT AS $$
+DECLARE
+    v_sale_id INT;
+BEGIN
+    -- Create a new sale
+    INSERT INTO store.sale (customer_id, vendor_id, shipping_address_id, sale_date)
+    VALUES (p_customer_id, p_vendor_id, p_shipping_address_id, CURRENT_DATE)
+    RETURNING id INTO v_sale_id;
+
+    -- Insert cart items into sale_details
+    INSERT INTO store.sale_details (sale_id, product_id, quantity, unit_price)
+    SELECT v_sale_id, c.product_id, c.quantity, p.unit_price
+    FROM store.cart c
+    JOIN store.product p ON c.product_id = p.id
+    WHERE c.customer_id = p_customer_id;
+
+    -- Clear the customer's cart
+    DELETE FROM store.cart
+    WHERE customer_id = p_customer_id;
+
+    RETURN v_sale_id;
+END;
+$$ LANGUAGE plpgsql;
 
 -- -----------------------------------------------------------------------------
 -- Indexes for improved performance
 -- -----------------------------------------------------------------------------
 CREATE INDEX idx_product_category ON store.product(category_id);
 CREATE INDEX idx_cart_customer ON store.cart(customer_id);
+CREATE INDEX idx_shipping_address_customer ON store.shipping_address(customer_id);
+CREATE INDEX idx_sale_customer ON store.sale(customer_id);
+CREATE INDEX idx_sale_details_sale ON store.sale_details(sale_id);
 
--- -----------------------------------------------------------------------------
--- Ideas for Future Database Improvements:
--- -----------------------------------------------------------------------------
 
--- 1. Add inventory tracking:
---    Create an inventory table to track current stock levels for each product.
---    Implement triggers to update inventory on purchases and sales.
+-- SELECT * FROM get_sale_total(1);
+-- iter over all the row of the sale table
+-- SELECT COUNT(*) FROM store.sale
 
--- 2. Implement user authentication:
---    Add a users table for system access control.
---    Include roles (admin, manager, salesperson) for fine-grained permissions.
-
--- 3. Enhance customer information:
---    Expand the customer table with fields like email, phone, address.
---    Consider creating a separate addresses table for multiple customer addresses.
-
--- 4. Implement a discount system:
---    Add fields for discounts in the sale and sale_details tables.
---    Create a separate discounts table for managing various types of discounts.
-
--- 5. Add payment tracking:
---    Create a payments table to track multiple payments for a single sale.
---    Include payment methods (cash, credit card, etc.) and payment status.
-
--- 6. Implement a review system:
---    Add a reviews table linked to products and customers.
---    This would allow tracking of customer feedback on products.
-
--- 7. Version control for products:
---    Implement a system to track changes in product details over time.
---    This could help in historical analysis of pricing and description changes.
-
--- 8. Supplier performance tracking:
---    Add fields to the provider table to track metrics like delivery time, quality, etc.
---    This could help in supplier evaluation and selection.
-
--- 9. Implement a loyalty program:
---    Add a points system for customers, tracking points earned and redeemed.
---    This could encourage repeat business and allow for targeted marketing.
-
--- 10. Consider adding a status field to the cart table:
---     ALTER TABLE store.cart ADD COLUMN status VARCHAR(20) DEFAULT 'active';
-
--- 11. Implement a function to convert cart to sale:
---     This could be a stored procedure that creates a sale from the cart items.
-
--- 12. Add timestamp fields for auditing purposes:
---     ALTER TABLE store.product ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
---     ALTER TABLE store.product ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-
--- 13. Consider adding a stock quantity field to the product table:
---     ALTER TABLE store.product ADD COLUMN stock_quantity INT DEFAULT 0;
-
--- 14. Implement triggers to update stock quantity on purchase and sale.
-
--- 15. Consider implementing partitioning for large tables like sale_details or purchase_details.
-
--- 16. Implement a view that shows product availability (in stock, out of stock, low stock).
-
--- 17. Consider implementing full-text search capabilities for product descriptions.
+-- now exec the get_sale_total for all the sales
+SELECT get_sale_total(id) FROM store.sale;
