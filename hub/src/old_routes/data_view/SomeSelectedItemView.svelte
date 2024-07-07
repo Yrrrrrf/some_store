@@ -4,7 +4,7 @@
     import { fly } from 'svelte/transition';
     import { snakeToCamelWithSpaces } from '$lib/utils/utils';
     import SomeTable from './SomeTable.svelte';
-    import {exportDataToPDF} from "$lib/utils/export_pdf";
+    import {exportDataToPDF} from "$lib/utils/pdfExport";
 
     export let selectedItem: string;
     export let showFilterForm: boolean;

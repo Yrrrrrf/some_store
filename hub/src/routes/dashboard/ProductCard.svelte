@@ -1,7 +1,10 @@
 <script lang="ts">
     import { snakeToCamelWithSpaces } from '$lib/utils/stringUtils';
-    import { ProgressRadial } from '@skeletonlabs/skeleton';
+    import { ProgressRadial, Toast } from '@skeletonlabs/skeleton';
     import { createEventDispatcher } from 'svelte';
+    import { current_user_id } from '$lib/stores/app';
+    import { apiClient } from '$lib/utils/api';
+    import { triggerCartUpdate } from '$lib/stores/cartStore';
     import type { Product } from '$lib/stores/storeManager';
 
     export let product: Product;
@@ -9,6 +12,8 @@
 
     let imageLoaded = false;
     let isHovered = false;
+    let isAddingToCart = false;
+    let toastMessage = '';
 
     const dispatch = createEventDispatcher<{
         'add-to-cart': Product;
@@ -18,8 +23,29 @@
         imageLoaded = true;
     }
 
-    function handleAddToCart() {
-        dispatch('add-to-cart', product);
+    async function handleAddToCart() {
+        if (!$current_user_id) {
+            toastMessage = 'Please select a customer before adding to cart.';
+            return;
+        }
+
+        isAddingToCart = true;
+        try {
+            const cartItem = {
+                customer_id: $current_user_id,
+                product_id: product.id,
+                quantity: 1
+            };
+            await apiClient.createRecord('cart', cartItem);
+            dispatch('add-to-cart', product);
+            triggerCartUpdate(); // Trigger cart update
+            toastMessage = 'Product added to cart successfully!';
+        } catch (error) {
+            console.error('Error adding product to cart:', error);
+            toastMessage = 'Failed to add product to cart. Please try again.';
+        } finally {
+            isAddingToCart = false;
+        }
     }
 </script>
 
@@ -59,10 +85,21 @@
                         class="btn variant-filled-primary transition-all duration-300"
                         class:scale-110={isHovered}
                         on:click={handleAddToCart}
+                        disabled={isAddingToCart}
                 >
-                    Add to Cart
+                    {#if isAddingToCart}
+                        <ProgressRadial width="w-6" />
+                    {:else}
+                        Add to Cart
+                    {/if}
                 </button>
             </div>
         </div>
     </div>
 </div>
+
+{#if toastMessage}
+    <Toast position="b" autohide={true} timeout={3000} on:close={() => toastMessage = ''}>
+        {toastMessage}
+    </Toast>
+{/if}

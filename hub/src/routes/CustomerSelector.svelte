@@ -33,9 +33,10 @@
     }
 
     async function handleCreateCustomer() {
-        if (newCustomerName.trim().length > 0) {
+        const trimmedName = newCustomerName.trim();
+        if (trimmedName.length > 0) {
             try {
-                const newCustomer = await apiClient.createRecord<Customer>('customer', { name: newCustomerName.trim() });
+                const newCustomer = await apiClient.createRecord<Customer>('customer', { name: trimmedName });
                 customers = [...customers, newCustomer];
                 newCustomerName = '';
                 handleCustomerSelect(newCustomer.id);
@@ -73,9 +74,9 @@
             <label class="label">
                 <span>Select Existing Customer</span>
                 <select
-                        class="select"
-                        bind:value={selectedCustomerId}
-                        on:change={() => handleCustomerSelect(selectedCustomerId)}
+                    class="select"
+                    bind:value={selectedCustomerId}
+                    on:change={() => handleCustomerSelect(selectedCustomerId)}
                 >
                     <option value={null}>Choose a customer...</option>
                     {#each customers as customer}
@@ -91,13 +92,12 @@
                             type="text"
                             class="input"
                             bind:value={newCustomerName}
-                            on:input={() => newCustomerName = newCustomerName.trim()}
                     />
                 </label>
                 <button
-                        class="btn mt-2 {newCustomerName.length > 0 ? 'button-enabled' : 'button-disabled'}"
+                        class="btn mt-2 {newCustomerName.trim().length > 0 ? 'button-enabled' : 'button-disabled'}"
                         on:click={handleCreateCustomer}
-                        disabled={newCustomerName.length === 0}
+                        disabled={newCustomerName.trim().length === 0}
                 >
                     Create Customer
                 </button>

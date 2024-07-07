@@ -20,6 +20,20 @@
 
     <section class="card p-4 variant-ghost-surface">
         <header class="card-header">
+            <h2 class="h2">Get Started</h2>
+        </header>
+        <div class="p-4">
+            <p class="mb-4">Explore our features and start managing your store efficiently:</p>
+            <div class="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-2">
+                <a class="btn variant-filled-primary" href="/dashboard">Go to Dashboard</a>
+                <a class="btn variant-filled-secondary" href="/data-view">Explore Data Views</a>
+                <a class="btn variant-filled-tertiary" href="/manage">Manage Products</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="card p-4 variant-ghost-surface">
+        <header class="card-header">
             <h2 class="h2 flex items-center">
                 <Zap class="mr-2" />
                 Key Features
@@ -36,17 +50,4 @@
         </div>
     </section>
 
-    <section class="card p-4 variant-ghost-surface">
-        <header class="card-header">
-            <h2 class="h2">Get Started</h2>
-        </header>
-        <div class="p-4">
-            <p class="mb-4">Explore our features and start managing your store efficiently:</p>
-            <div class="flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-2">
-                <a class="btn variant-filled-primary" href="/dashboard">Go to Dashboard</a>
-                <a class="btn variant-filled-secondary" href="/data-view">Explore Data Views</a>
-                <a class="btn variant-filled-tertiary" href="/manage">Manage Products</a>
-            </div>
-        </div>
-    </section>
 </main>

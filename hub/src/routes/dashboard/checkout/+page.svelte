@@ -1,12 +1,10 @@
 <script lang="ts">
-    import { onMount, afterUpdate } from 'svelte';
-    import { fade, fly } from 'svelte/transition';
-    import { ShoppingCart, Trash2, Plus, Minus } from 'lucide-svelte';
-    import { ProgressRadial } from '@skeletonlabs/skeleton';
+    import { onMount } from 'svelte';
     import { apiClient } from '$lib/utils/api';
     import { current_user_id } from '$lib/stores/app';
-    import { cartUpdateTrigger } from '$lib/stores/cartStore';
-    import { goto } from "$app/navigation";
+    import { ProgressRadial } from '@skeletonlabs/skeleton';
+    import { exportOrderToPDF } from '$lib/utils/pdfExport';
+    import { ShoppingCart} from "lucide-svelte";
 
     interface CartItem {
         id: number;
@@ -27,6 +25,10 @@
     let isLoading = true;
     let error: string | null = null;
     let total = 0;
+
+    let address = '123 Main St, Anytown, USA'; // Example address
+    const paymentMethods = ['Credit Card', 'PayPal', 'Bank Transfer'];
+    let selectedPaymentMethod = paymentMethods[0];
 
     $: {
         if (cartItems && productDetails.size > 0) {
@@ -54,32 +56,6 @@
         productDetails = new Map(productDetails); // Trigger reactivity
     }
 
-    async function updateQuantity(item: CartItem, change: number) {
-        const newQuantity = item.quantity + change;
-        if (newQuantity > 0) {
-            try {
-                await apiClient.updateRecord('cart', 'id', item.id, { quantity: newQuantity });
-                item.quantity = newQuantity;
-                cartItems = [...cartItems];
-            } catch (e) {
-                console.error('Error updating quantity:', e);
-                error = 'Failed to update quantity';
-            }
-        } else {
-            removeItem(item);
-        }
-    }
-
-    async function removeItem(item: CartItem) {
-        try {
-            await apiClient.deleteRecord('cart', 'id', item.id);
-            cartItems = cartItems.filter(i => i.id !== item.id);
-        } catch (e) {
-            console.error('Error removing item:', e);
-            error = 'Failed to remove item';
-        }
-    }
-
     async function fetchCartItems() {
         isLoading = true;
         error = null;
@@ -95,34 +71,34 @@
         }
     }
 
-    onMount(() => {
-        fetchCartItems();
-
-        // Subscribe to cart updates
-        const unsubscribe = cartUpdateTrigger.subscribe(() => {
-            fetchCartItems();
-        });
-
-        return () => {
-            unsubscribe();
+    function handleDownloadPDF() {
+        const orderData = {
+            cartItems: cartItems.map(item => ({
+                product: productDetails.get(item.product_id),
+                quantity: item.quantity
+            })),
+            total,
+            address,
+            paymentMethod: selectedPaymentMethod,
+            orderDate: new Date().toISOString(),
+            orderId: `ORD-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
         };
-    });
-
-    $: if ($current_user_id) {
-        fetchCartItems();
+        exportOrderToPDF(orderData).then(pdfUrl => {
+            window.open(pdfUrl, '_blank');
+        });
     }
 
+    onMount(() => {
+        fetchCartItems();
+    });
 </script>
 
 <div class="card p-4 variant-ghost-surface">
     <header class="card-header flex justify-between items-center">
         <h3 class="h3 flex items-center gap-2">
             <ShoppingCart size={24} />
-            Your Cart
+            Checkout
         </h3>
-        {#if !isLoading && cartItems.length > 0}
-            <span class="badge variant-filled-primary">{cartItems.length}</span>
-        {/if}
     </header>
 
     {#if isLoading}
@@ -147,10 +123,8 @@
                             </div>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <button class="btn btn-sm variant-soft-primary" on:click={() => updateQuantity(item, -1)}><Minus size={16} /></button>
                             <span class="font-semibold">{item.quantity}</span>
-                            <button class="btn btn-sm variant-soft-primary" on:click={() => updateQuantity(item, 1)}><Plus size={16} /></button>
-                            <button class="btn btn-sm variant-soft-error" on:click={() => removeItem(item)}><Trash2 size={16} /></button>
+                            <span class="font-semibold">${(item.quantity * product.unit_price).toFixed(2)}</span>
                         </div>
                     </li>
                 {/if}
@@ -161,12 +135,9 @@
                 <span class="text-lg font-semibold">Total:</span>
                 <span class="text-xl font-bold">${total.toFixed(2)}</span>
             </div>
-            <button
-                    class="btn variant-filled-primary w-full mt-4"
-                    on:click={() => goto('/dashboard/checkout')}
-            >
-                Proceed to Checkout
-            </button>
         </div>
+        <button class="btn variant-filled-primary w-full mt-4" on:click={handleDownloadPDF}>
+            Download Order PDF
+        </button>
     {/if}
 </div>
