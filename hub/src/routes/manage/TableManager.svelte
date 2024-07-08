@@ -1,9 +1,10 @@
 <script lang="ts">
+    import { onMount } from 'svelte';
+    import { apiClient } from '$lib/utils/api';
     import TableForm from './TableForm.svelte';
     import TableData from './TableData.svelte';
     import { ProgressRadial } from '@skeletonlabs/skeleton';
 
-    export let apiUrl: string;
     export let tableName: string;
 
     let columns: string[] = [];
@@ -19,19 +20,14 @@
         }
     }
 
-    /**
-     * Loads table data and columns
-     */
     async function loadTableData() {
         isLoading = true;
         showForm = false;
         editingItem = null;
         errorMessage = '';
         try {
-            await Promise.all([
-                fetchColumns(apiUrl, tableName, (data) => columns = data),
-                fetchTableRows(apiUrl, tableName, {}, (data) => tableData = data)
-            ]);
+            columns = await apiClient.fetchColumns(tableName);
+            tableData = await apiClient.fetchRows(tableName);
         } catch (error) {
             console.error('Error loading table data:', error);
             errorMessage = 'Failed to load table data. Please try again.';
@@ -40,29 +36,23 @@
         }
     }
 
-    /**
-     * Handles the edit action for a table item
-     * @param {CustomEvent} event - The edit event
-     */
     function handleEdit(event: CustomEvent) {
         editingItem = event.detail;
         showForm = true;
     }
 
-    /**
-     * Handles the delete action for a table item
-     * @param {CustomEvent} event - The delete event
-     */
     async function handleDelete(event: CustomEvent) {
         const itemToDelete = event.detail;
         try {
-            await deleteRecord(apiUrl, tableName, 'id', itemToDelete.id);
+            await apiClient.deleteRecord(tableName, 'id', itemToDelete.id);
             await loadTableData();
         } catch (error) {
             console.error('Error deleting record:', error);
             errorMessage = 'Failed to delete record. Please try again.';
         }
     }
+
+    onMount(loadTableData);
 </script>
 
 <div>
@@ -87,6 +77,7 @@
             <TableForm
                     {tableName}
                     {editingItem}
+                    on:submit={loadTableData}
                     on:cancel={() => { showForm = false; editingItem = null; }}
             />
         {/if}

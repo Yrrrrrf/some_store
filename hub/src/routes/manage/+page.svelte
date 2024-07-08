@@ -1,15 +1,17 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { api_url } from '$lib/stores/app';
+    import { apiClient } from '$lib/utils/api';
     import TableManager from './TableManager.svelte';
 
     let tables: string[] = [];
     let selectedTable: string | null = null;
-    let apiUrl: string;
-
-    api_url.subscribe(value => apiUrl = value);
 
     onMount(async () => {
+        try {
+            tables = await apiClient.fetchTables();
+        } catch (error) {
+            console.error('Error fetching tables:', error);
+        }
     });
 </script>
 
@@ -36,7 +38,7 @@
 
         <div class="md:col-span-3">
             {#if selectedTable}
-                <TableManager {apiUrl} tableName={selectedTable} />
+                <TableManager tableName={selectedTable} />
             {:else}
                 <p class="text-center text-gray-500">Select a table to manage its data</p>
             {/if}

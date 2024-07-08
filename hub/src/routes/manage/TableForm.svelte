@@ -2,7 +2,7 @@
     import { createEventDispatcher, onMount } from 'svelte';
     import { snakeToCamelWithSpaces } from '$lib/utils/stringUtils';
     import { ProgressRadial } from '@skeletonlabs/skeleton';
-    import {api_url} from "$lib/stores/app";
+    import { apiClient } from '$lib/utils/api';
 
     export let tableName: string;
     export let editingItem: any = null;
@@ -10,48 +10,31 @@
     let columns: string[] = [];
     let formData: {[key: string]: any} = {};
     let foreignKeyOptions: {[key: string]: any[]} = {};
-    let apiUrl: string;
     let isLoading = true;
     let errorMessage = '';
-
-    api_url.subscribe(value => apiUrl = value);
 
     const dispatch = createEventDispatcher();
 
     let selectedFile: File | null = null;
 
-    /**
-     * Generates a local URL for the uploaded file
-     * @param {File} file - The uploaded file
-     * @returns {string} Local URL for the file
-     */
     function getLocalImageUrl(file: File): string {
         return URL.createObjectURL(file);
     }
 
-    /**
-     * Gets today's date in YYYY-MM-DD format
-     * @returns {string} Today's date
-     */
     function getTodayDate(): string {
         return new Date().toISOString().split('T')[0];
     }
 
-    /**
-     * Initializes the form with data
-     */
     async function initializeForm() {
         isLoading = true;
         try {
-            await fetchColumns(apiUrl, tableName, (data) => {
-                columns = data;
-                formData = columns.reduce((acc, col) => {
-                    if (isDateColumn(col)) {
-                        return { ...acc, [col]: getTodayDate() };
-                    }
-                    return { ...acc, [col]: '' };
-                }, {});
-            });
+            columns = await apiClient.fetchColumns(tableName);
+            formData = columns.reduce((acc, col) => {
+                if (isDateColumn(col)) {
+                    return { ...acc, [col]: getTodayDate() };
+                }
+                return { ...acc, [col]: '' };
+            }, {});
 
             await Promise.all(columns.map(async (column) => {
                 if (column.endsWith('_id')) {
@@ -62,7 +45,6 @@
 
             if (editingItem) {
                 formData = { ...editingItem };
-                // Format date fields
                 columns.forEach(column => {
                     if (isDateColumn(column) && formData[column]) {
                         formData[column] = formatDateForInput(formData[column]);
@@ -77,60 +59,32 @@
         }
     }
 
-    /**
-     * Fetches foreign key options for a referenced table
-     * @param {string} referencedTable - The name of the referenced table
-     */
     async function fetchForeignKeyOptions(referencedTable: string) {
         try {
-            await fetchTableRows(apiUrl, referencedTable, {}, (data) => {
-                foreignKeyOptions[referencedTable] = data;
-            });
+            const data = await apiClient.fetchRows(referencedTable);
+            foreignKeyOptions[referencedTable] = data;
         } catch (error) {
             console.error(`Error fetching foreign key options for ${referencedTable}:`, error);
         }
     }
 
-    /**
-     * Checks if a column is an ID column
-     * @param {string} column - The column name
-     * @returns {boolean} True if it's an ID column, false otherwise
-     */
     function isIdColumn(column: string): boolean {
         return column.toLowerCase() === 'id';
     }
 
-    /**
-     * Checks if a column is a date column
-     * @param {string} column - The column name
-     * @returns {boolean} True if it's a date column, false otherwise
-     */
     function isDateColumn(column: string): boolean {
         return column.toLowerCase().includes('date');
     }
 
-    /**
-     * Formats a date string for input fields
-     * @param {string} dateString - The date string to format
-     * @returns {string} Formatted date string
-     */
     function formatDateForInput(dateString: string): string {
         const date = new Date(dateString);
         return date.toISOString().split('T')[0];
     }
 
-    /**
-     * Formats a date string for submission
-     * @param {string} dateString - The date string to format
-     * @returns {string} Formatted date string
-     */
     function formatDateForSubmission(dateString: string): string {
-        return dateString; // 'yyyy-mm-dd' format is already correct for submission
+        return dateString;
     }
 
-    /**
-     * Handles form submission
-     */
     async function handleSubmit() {
         errorMessage = '';
         isLoading = true;
@@ -144,18 +98,16 @@
 
             delete submissionData['id'];
 
-            // Remove empty 'reference' field for 'sale' table
             if (tableName === 'sale' && !submissionData['reference']) {
                 delete submissionData['reference'];
             }
 
-            // Handle image upload
             if (selectedFile && tableName === 'product') {
                 const productCode = submissionData['code'] || 'default';
                 const formData = new FormData();
                 formData.append('file', selectedFile);
 
-                const uploadResponse = await fetch(`${apiUrl}/upload-image/${productCode}`, {
+                const uploadResponse = await fetch(`${apiClient.baseUrl}/upload-image/${productCode}`, {
                     method: 'POST',
                     body: formData
                 });
@@ -168,32 +120,22 @@
                 }
             }
 
-            console.log('Form submitted:', submissionData);
-
             let result;
             if (editingItem) {
-                result = await updateRecord(apiUrl, tableName, 'id', editingItem.id, submissionData);
+                result = await apiClient.updateRecord(tableName, 'id', editingItem.id, submissionData);
             } else {
-                result = await createRecord(apiUrl, tableName, submissionData);
+                result = await apiClient.createRecord(tableName, submissionData);
             }
 
             dispatch('submit', result);
         } catch (error) {
             console.error('Error submitting form:', error);
-            if (error.response && error.response.status === 422) {
-                const responseData = await error.response.json();
-                errorMessage = responseData.detail || 'Validation error occurred. Please check your inputs.';
-            } else {
-                errorMessage = 'An error occurred while submitting the form. Please try again.';
-            }
+            errorMessage = 'An error occurred while submitting the form. Please try again.';
         } finally {
             isLoading = false;
         }
     }
 
-    /**
-     * Handles form cancellation
-     */
     function handleCancel() {
         dispatch('cancel');
     }
