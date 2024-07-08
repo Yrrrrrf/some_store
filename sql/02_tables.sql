@@ -10,9 +10,7 @@
 DROP TABLE IF EXISTS store.customer CASCADE;
 CREATE TABLE store.customer (
     id SERIAL PRIMARY KEY,              -- Unique identifier for each customer
-    name VARCHAR(100) NOT NULL,         -- Full name of the customer
-    email VARCHAR(255) UNIQUE NOT NULL, -- Customer's email address (used for login)
-    phone VARCHAR(20)                   -- Customer's phone number (optional)
+    name VARCHAR(100) NOT NULL         -- Full name of the customer
 );
 
 -- -----------------------------------------------------------------------------

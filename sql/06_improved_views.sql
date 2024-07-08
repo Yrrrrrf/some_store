@@ -94,7 +94,9 @@ JOIN
 -- -----------------------------------------------------------------------------
 
 SELECT * FROM store.view_sale_products;
+-- SELECT * FROM store.view_purchase_products;
+
 SELECT * FROM store.view_neo_sale;
-SELECT * FROM store.view_purchase_products;
 SELECT * FROM store.view_neo_purchase;
+
 SELECT * FROM store.view_product_details;

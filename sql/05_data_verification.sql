@@ -130,4 +130,4 @@ LEFT JOIN (
     GROUP BY product_id
 ) sales ON p.id = sales.product_id
 ORDER BY p.id
-LIMIT 10;
+;
