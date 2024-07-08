@@ -183,7 +183,11 @@ def generate_views(
     for schema in schemas:
         print(f"Schema: {schema.capitalize()}")
         for table_name, table in metadata.tables.items():
-            if table_name.startswith('report_'):
+            # todo: Check how to filter views with a better method...
+            # todo:     - for now we are checking if the table name starts with 'report_' or 'view_'
+            # todo:     - this is not a good method as it may not work in all cases
+            # todo:     - need to find a better way to filter views.
+            if table_name.startswith('report_') or table_name.startswith('view_'):
                 table_name = table_name.split('.')[-1]
                 print(f"\tView: {table_name}")
 

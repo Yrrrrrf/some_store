@@ -1,8 +1,8 @@
 <script lang="ts">
     import { createEventDispatcher, onMount } from 'svelte';
-    import { fetchTableRows, fetchColumns, snakeToCamelWithSpaces, createRecord, updateRecord } from '$lib/utils/utils';
-    import { api_url } from '$lib/utils/utils';
+    import { snakeToCamelWithSpaces } from '$lib/utils/stringUtils';
     import { ProgressRadial } from '@skeletonlabs/skeleton';
+    import {api_url} from "$lib/stores/app";
 
     export let tableName: string;
     export let editingItem: any = null;

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { fetchTables, api_url } from '$lib/utils/utils';
+    import { api_url } from '$lib/stores/app';
     import TableManager from './TableManager.svelte';
 
     let tables: string[] = [];
@@ -10,7 +10,6 @@
     api_url.subscribe(value => apiUrl = value);
 
     onMount(async () => {
-        await fetchTables(apiUrl, (data) => tables = data);
     });
 </script>
 

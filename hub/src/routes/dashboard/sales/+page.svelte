@@ -38,23 +38,15 @@
         <div class="flex justify-center items-center h-64">
             <ProgressRadial />
         </div>
-        asasas
     {:else if error}
-        2
         <p class="text-error-500 p-4 text-center">{error}</p>
     {:else if sales.length === 0}
-        333
         <p class="p-4 text-center text-xl">No sales history found</p>
     {:else}
-        44444
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="lg:col-span-2">
                 <SalesHistory sales={sales} />
             </div>
-<!--            <div class="space-y-8">-->
-<!--                <SalesSummary {sales} />-->
-<!--                <SalesChart {sales} />-->
-<!--            </div>-->
         </div>
     {/if}
 </div>

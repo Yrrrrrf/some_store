@@ -2,7 +2,7 @@
     import { ProgressRadial } from '@skeletonlabs/skeleton';
     import { Filter } from 'lucide-svelte';
     import { fly } from 'svelte/transition';
-    import { snakeToCamelWithSpaces } from '$lib/utils/utils';
+    import { snakeToCamelWithSpaces } from '$lib/utils/stringUtils';
     import SomeTable from './SomeTable.svelte';
     import {exportDataToPDF} from "$lib/utils/pdfExport";
 

@@ -119,22 +119,22 @@ async def convert_cart_to_sale(customer_id: int, vendor_id: int, shipping_addres
 
 
 # add a route that list all the functions in the database
-@function_router.get("/a", response_model=List[str])
-async def get_functions(db: Session = Depends(get_db)):
-    """
-    Get a list of all functions in the database.
+# @function_router.get("/", response_model=List[str])
+# async def get_functions(db: Session = Depends(get_db)):
+#     """
+#     Get a list of all functions in the database.
     
-    Args:
-        db (Session): The database session.
+#     Args:
+#         db (Session): The database session.
     
-    Returns:
-        List[str]: A list of function names.
-    """
+#     Returns:
+#         List[str]: A list of function names.
+#     """
 
-    return [
-        "get_purchase_total",
-        "get_sale_total",
-        "get_product_inventory",
-        "convert_cart_to_sale"
-        ]
+#     return [
+#         "get_purchase_total",
+#         "get_sale_total",
+#         "get_product_inventory",
+#         "convert_cart_to_sale"
+#         ]
     
