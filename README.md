@@ -50,11 +50,11 @@ npm install  # install the required packages
 Create the [.env](./.env) file in the root directory and **add the following environment variables** to configure private database credentials:
 ```bash
 # * Database (PostgreSQL)
-DB_NAME = "academic_hub"  # the name of the database to connect to
+DB_NAME = "some_store"  # the name of the database to connect to
 DB_HOST = "localhost"  # the host of the database
 DB_PORT = "5432"  # default port
-DB_OWNER = "postgres"  # the superuser (owner) of the database
-DB_OWNER_PASSWORD = "some_password_here"  # the password of the superuser
+DB_OWNER = "some_store_owner"  # the superuser (owner) of the database
+DB_OWNER_PASSWORD = "store_password"  # the password of the superuser
 
 # * Authentication (JWT)
 SECRET_KEY = "some_secret_key"  # used to sign the JWT tokens
@@ -90,14 +90,7 @@ npm run dev  # run the frontend application
 ```
 - Access the frontend application at [port 5173](http://localhost:5173/)
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0;">
-    <div style="flex: 1; margin-right: 10px;">
-        <img src="./assets/static/data_view.png" alt="Data View" style="width: 100%; max-width: 400px;">
-    </div>
-    <div style="flex: 1; margin-left: 10px;">
-        <img src="./assets/static/data_management.png" alt="Data Management" style="width: 100%; max-width: 400px;">
-    </div>
-</div>
+![welcome](./assets/static/welcome.jpeg)
 
 ## 📘 Documentation
 
