@@ -17,7 +17,6 @@ DB_OWNER_PWORD = os.getenv('DB_OWNER_PWORD', 'academic_password')  # Default to 
 engine = create_engine(f'postgresql://{DB_OWNER}:{DB_OWNER_PWORD}@{DB_HOST}/{DB_NAME}')
 
 
-
 # * Get passwords from environment variables
 def _get_admin_credentials(admin_type: str) -> tuple[str, str]:
     return os.getenv(f"{admin_type}_ADMIN"), os.getenv(f"{admin_type}_PWORD")

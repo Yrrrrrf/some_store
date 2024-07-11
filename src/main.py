@@ -40,7 +40,6 @@ app.add_middleware(  # Add CORS middleware
 )
 
 
-
 # Mount the uploads directory
 app.mount("/static", StaticFiles(directory="hub/static"), name="static")
 

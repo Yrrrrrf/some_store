@@ -1,10 +1,10 @@
 # 3rd party imports
+from typing import Tuple
 from fastapi import APIRouter
+from crud_forge.generators.crud import generate_crud, create_route, get_route, put_route, delete_route
 
 # local imports
 from src.api.database import *
-from src.api.route_generators import *
-from src.config import Config
 
 
 def define_routes() -> Tuple[APIRouter, APIRouter, APIRouter, APIRouter]:
@@ -75,17 +75,11 @@ def define_routes() -> Tuple[APIRouter, APIRouter, APIRouter, APIRouter]:
 
 home, basic_dt, views, crud_attr = define_routes()
 
-dt_routes(basic_dt, store_models, type="tables")  # * list all the tables in the database
-dt_routes(basic_dt, store_views, type="views")  # * list all the tables in the database
+views.prefix = "/views"
 
-# * Add all the CRUD routes for each model
-    # * Create: POST /{model_name} (take the model as a parameter)
-    # * Read: GET /{model_name} (get all w/ query params)
-    # * Update: PUT /{model_name} (modify all w/ query params) (take the model as a parameter)
-    # * Delete: DELETE /{model_name} (delete all w/ query params)
 for sqlalchemy_model, pydantic_model in store_models.values():
-    crud_routes(sqlalchemy_model, pydantic_model, crud_attr, db_manager.get_db)
+    generate_crud(sqlalchemy_model, pydantic_model, crud_attr, db_manager.get_db)
 
-# * Add 'get_resources' route for each view (w/ query params)
 for sqlalchemy_model, pydantic_model in store_views.values():
-    view_routes(sqlalchemy_model, pydantic_model, views, db_manager.get_db)
+    get_route(sqlalchemy_model, pydantic_model, views, db_manager.get_db, tag="Views")
+
